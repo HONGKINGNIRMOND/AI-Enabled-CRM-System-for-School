@@ -1,0 +1,11 @@
+First Name,Last Name,Date of Birth,Gender,Blood Group,Phone,Email,Admission Date,Class,Section
+John,Doe,2010-05-15,Male,O+,1234567890,john.doe@email.com,2024-06-01,Class 10,A
+Jane,Smith,2010-08-22,Female,A-,0987654321,jane.smith@email.com,2024-06-01,Class 9,B
+Michael,Johnson,2009-12-03,Male,AB+,1122334455,michael.j@email.com,2024-06-01,Class 11,C
+Emily,Brown,2010-03-10,Female,B+,9988776655,emily.brown@email.com,2024-06-01,Class 8,A
+David,Wilson,2009-07-28,Male,O-,5544332211,david.wilson@email.com,2024-06-01,Class 12,B
+Sarah,Miller,2010-01-15,Female,A+,1231231234,sarah.miller@email.com,2024-06-01,Class 7,A
+Robert,Taylor,2009-11-08,Male,B-,4564564567,robert.taylor@email.com,2024-06-01,Class 10,B
+Lisa,Anderson,2010-04-25,Female,O+,7897897890,lisa.anderson@email.com,2024-06-01,Class 9,C
+James,Thomas,2009-09-12,Male,AB-,3213213210,james.thomas@email.com,2024-06-01,Class 11,A
+Maria,Garcia,2010-06-30,Female,B+,6546546543,maria.garcia@email.com,2024-06-01,Class 8,B

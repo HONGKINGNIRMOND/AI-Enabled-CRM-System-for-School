@@ -2,11 +2,11 @@
 
 A comprehensive School Management CRM System designed to streamline academic and administrative operations. This platform enables administrators and teachers to effectively manage and track student performance, attendance, and communication.
 
-## Key Features
-- **Comprehensive Administration**: Efficient management of students, teachers, classes, and roles.
-- **Academic Tracking**: Robust systems for recording and monitoring marks, attendance, and exam results.
-- **Automated Notifications**: Integrated Email, SMS, and WhatsApp alerts for attendance and performance updates.
-- **Bulk Data Management**: Support for bulk student and data uploads via CSV/Excel.
+- **Quick Action CRM**: Streamlined student performance tracking, filtering, and rapid updates.
+- **Omnichannel Communication**: Integrated alerts via Email, SMS, WhatsApp, and Voice calls.
+- **Circulars Broadcasting**: System-wide announcements with document attachments.
+- **Bulk Data Management**: Support for high-speed student and data uploads via CSV/Excel.
+- **AI-Powered Analytics**: Performance prediction and audio processing via Whisper.
 - **Secure Authentication**: Role-based access control with JWT-secured endpoints.
 
 ## Technology Stack
@@ -15,7 +15,8 @@ A comprehensive School Management CRM System designed to streamline academic and
 - **Core**: Node.js, Express.js
 - **Database**: PostgreSQL with Sequelize ORM
 - **Authentication**: JWT, bcryptjs
-- **Notifications**: Nodemailer (Email), Twilio (SMS/WhatsApp)
+- **Notifications**: Nodemailer (Email), Twilio (SMS, WhatsApp, Voice/Telephony)
+- **AI Analytics**: OpenAI/Whisper for transcription and insights
 - **Utilities**: Winston (Logging), Joi (Validation), Multer (File Uploads)
 
 ### Frontend
@@ -72,6 +73,12 @@ A comprehensive School Management CRM System designed to streamline academic and
    DB_USER="postgres"
    DB_PASSWORD="your_secure_password"
    DB_NAME="school_crm"
+
+   # Twilio Configuration
+   TWILIO_ACCOUNT_SID="your_sid"
+   TWILIO_AUTH_TOKEN="your_token"
+   TWILIO_PHONE_NUMBER="your_twilio_number"
+   TWILIO_WHATSAPP_NUMBER="whatsapp:your_whatsapp_number"
    ```
 5. **Run Setup**: Execute the setup script to run migrations and create default administrative users:
    ```bash

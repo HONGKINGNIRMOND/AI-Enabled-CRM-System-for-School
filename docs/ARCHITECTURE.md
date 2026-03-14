@@ -11,8 +11,10 @@ graph TD
     Backend <--> Database[(Database - PostgreSQL)]
     Backend <--> EmailService[Email Service - Nodemailer]
     Backend <--> SMSService[SMS Service - Twilio]
-    Backend <--> FileStorage[File Storage - Multer/Local]
-    Backend <--> AIService[AI Service - Integrated Analytics]
+    Backend <--> WhatsAppService[WhatsApp Service - Twilio/Cloud API]
+    Backend <--> TelephonyService[Telephony Service - Twilio]
+    Backend <--> FileStorage[File Storage - Local/GridFS]
+    Backend <--> AIService[AI Service - Whisper/Analytics]
 ```
 
 ## Architecture Diagram Explained
@@ -42,16 +44,16 @@ The diagram illustrates a **multi-tier client-server architecture**:
 - **ORM**: Sequelize 6.37.7 for database interactions and migrations.
 - **Authentication**: JWT 9.0.2-based role-based access control (RBAC) with bcryptjs 2.4.3.
 - **Validation**: Joi 17.11.0 for request payload validation.
-- **File Handling**: Multer 1.4.5-lts.1 for handling student/data uploads.
+- **File Handling**: Multer 1.4.5-lts.1 and specialized file parsers.
 - **Logging**: Winston 3.11.0 for system logging.
 - **Task Scheduling**: Node-cron 3.0.3 for automated notifications.
 - **Database**: PostgreSQL with pg 8.18.0 driver.
-- **Email**: Nodemailer 6.9.7 for email notifications.
-- **SMS/WhatsApp**: Twilio 4.23.0 for messaging services.
-- **File Processing**: csv-parse 6.1.0, csv-parser 3.2.0, exceljs 4.4.0, xlsx 0.18.5 for bulk data imports.
-- **PDF Generation**: PDFKit 0.14.0 for report generation.
-- **Testing**: Jest 29.7.0 with Supertest 6.3.3 for API testing.
-- **Development**: Nodemon 3.0.2 for hot reloading.
+- **Email**: Nodemailer 6.9.7 for SMTP relay.
+- **Communication**: Twilio 4.23.0 for SMS, WhatsApp, and Telephony.
+- **AI/Audio**: Whisper API integration for audio processing and analytics.
+- **File Processing**: `exceljs`, `csv-parse`, `xlsx` for bulk data operations.
+- **PDF Generation**: PDFKit 0.14.0 for dynamic reports.
+- **Testing**: Jest 29.7.0 with Supertest.
 
 ### 3. Database (`/database`)
 - **Engine**: PostgreSQL.
@@ -113,21 +115,20 @@ root/
 │   │   ├── analytics.js
 │   │   ├── attendance.routes.js
 │   │   ├── audit.js
-│   │   ├── auth.js
 │   │   ├── auth.routes.js
+│   │   ├── circulars.routes.js  # Circular broadcasting
 │   │   ├── classFeeStructure.routes.js
 │   │   ├── customers.js
 │   │   ├── fees.js
 │   │   ├── grades.routes.js
 │   │   ├── interactions.js
-│   │   ├── leads.js
+│   │   ├── leads.js             # CRM Lead management
 │   │   ├── marks.routes.js
 │   │   ├── master.routes.js
-│   │   ├── quick-action.routes.js
+│   │   ├── quick-action.routes.js # Quick Action CRM
 │   │   ├── rankings.js
 │   │   ├── reports.routes.js
 │   │   ├── student.routes.js
-│   │   ├── students.js
 │   │   ├── teacher.routes.js
 │   │   └── users.js
 │   ├── scripts/             # Database scripts and migrations
@@ -161,7 +162,11 @@ root/
 │   │   ├── emailService.js
 │   │   ├── fileParserService.js
 │   │   ├── notificationService.js
-│   │   └── studentService.js
+│   │   ├── studentService.js
+│   │   ├── telephonyService.js  # Voice call integration
+│   │   ├── whatsappService.js   # WhatsApp messaging
+│   │   ├── whisperService.js    # AI Audio processing
+│   │   └── whatsappService.js 
 │   ├── uploads/             # Uploaded files directory
 │   └── utils/               # Utility functions
 ├── database/                # Database schema and migrations
@@ -177,6 +182,8 @@ root/
     ├── public/              # Static assets
     └── src/                 # React source code
         ├── components/      # Reusable UI components
+        │   ├── Circulars/     # Circular management
+        │   └── quick-action/  # Quick Action CRM UI
         ├── pages/           # Page components
         ├── services/        # API service functions
         └── utils/           # Frontend utilities
@@ -185,15 +192,15 @@ root/
 ## Key Features
 
 - **Comprehensive Administration**: Efficient management of students, teachers, classes, and roles.
-- **Academic Tracking**: Robust systems for recording and monitoring marks, attendance, and exam results.
-- **Automated Notifications**: Integrated Email, SMS, and WhatsApp alerts for attendance and performance updates.
-- **Bulk Data Management**: Support for bulk student and data uploads via CSV/Excel.
-- **Secure Authentication**: Role-based access control with JWT-secured endpoints.
-- **AI Integration**: AI-powered analytics and insights for student performance.
-- **Audit Logging**: Comprehensive audit trails for all system activities.
-- **Fee Management**: Automated fee calculation, tracking, and reporting.
-- **Lead Management**: CRM features for managing prospective students and parents.
-- **Reporting**: Detailed reports on academic performance, attendance, and finances.
+- **Quick Action CRM**: Streamlined student performance tracking, filtering, and rapid updates.
+- **Lead & CRM Management**: Targeted management of prospective students and interactions.
+- **Circulars Broadcasting**: System-wide announcements with document attachments.
+- **Omnichannel Communication**: Integrated Email, SMS, WhatsApp, and Voice alerts.
+- **AI-Powered Insights**: Performance prediction and audio-to-text analytics via Whisper.
+- **Academic Tracking**: Robust recording of marks, attendance, and exam results.
+- **Bulk Data Management**: High-speed uploads via CSV/Excel.
+- **Fee Management**: Automated billing, tracking, and balance reporting.
+- **Audit Logging**: Secure trail of all sensitive operations.
 
 ## System Workflow
 
@@ -242,12 +249,12 @@ The backend provides RESTful APIs organized by functionality:
 - **Attendance** (`/api/attendance`): Attendance tracking and reporting
 - **Marks** (`/api/marks`): Grade management and calculations
 - **Fees** (`/api/fees`): Fee structure and payment tracking
-- **Analytics** (`/api/analytics`): Performance analytics and insights
-- **AI** (`/api/ai`): AI-powered recommendations and analysis
+- **Quick Action** (`/api/quick-action`): CRM-style rapid student updates
+- **Leads & CRM** (`/api/leads`, `/api/customers`, `/api/interactions`): Lead lifecycle management
+- **Circulars** (`/api/circulars`): Announcement broadcasting
+- **Analytics & AI** (`/api/analytics`, `/api/ai`): Advanced insights
 - **Audit** (`/api/audit`): System activity logging
 - **Reports** (`/api/reports`): Various report generation
-- **Leads** (`/api/leads`): CRM lead management
-- **Interactions** (`/api/interactions`): Communication tracking
 
 All endpoints are protected with JWT authentication and role-based permissions.
 
@@ -255,14 +262,13 @@ All endpoints are protected with JWT authentication and role-based permissions.
 
 The PostgreSQL database consists of the following key entities:
 
-- **Users & Roles**: User authentication and authorization system
-- **Students**: Student profiles with parent information
-- **Classes & Subjects**: Academic structure management
-- **Marks & Attendance**: Academic performance tracking
-- **Fees**: Financial management and fee structures
-- **Audit Logs**: System activity tracking
-- **Leads & Customers**: CRM functionality
-- **Interactions**: Communication history
-- **Notifications**: Automated messaging system
+- **Users & Roles**: User authentication and authorization system.
+- **Students & Parents**: Normalized registration system with specialized tables (`students`, `parents`, `student_parents`).
+- **Academic Structure**: Classes, sections, subjects, and grade mappings.
+- **CRM Entities**: Comprehensive tracking for `leads`, `customers`, and communication `interactions`.
+- **Academic Performance**: Marks, attendance, exams, and grading rules.
+- **Finances**: Fee structures and payment histories.
+- **System Activity**: Audit logs and system configurations.
+- **Communications**: Automated messaging and notification history.
 
 The schema includes proper relationships, indexes, and triggers for data integrity and performance.

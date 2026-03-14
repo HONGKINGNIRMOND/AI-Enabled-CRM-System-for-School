@@ -238,7 +238,7 @@ const AttendanceReports = () => {
                                                 {student.student_name}
                                             </td>
                                             <td className="py-3 px-4 text-gray-600">
-                                                {student.registration_number}
+                                                {student.roll_number || '-'}
                                             </td>
                                             <td className="py-3 px-4 text-center">
                                                 {student.total_days || 0}

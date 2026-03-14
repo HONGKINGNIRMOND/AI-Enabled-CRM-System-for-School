@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { studentsAPI, attendanceAPI, marksAPI, masterAPI } from '../../services/api';
+import { studentsAPI, attendanceAPI, marksAPI, masterAPI, gradesAPI } from '../../services/api';
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, Book, User, GraduationCap, Droplet, Clock, Trash2, Ban, CheckCircle, UserCheck, TrendingUp, BookOpen, Award } from 'lucide-react';
 
 const StudentDetails = () => {
@@ -8,7 +8,7 @@ const StudentDetails = () => {
     const navigate = useNavigate();
     const [student, setStudent] = useState(null);
     const [attendanceData, setAttendanceData] = useState(null);
-    const [academicData, setAcademicData] = useState({ subjects: [], marks: [] });
+    const [academicData, setAcademicData] = useState({ subjects: [], marks: [], grades: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -29,13 +29,15 @@ const StudentDetails = () => {
 
     const fetchAcademicData = async () => {
         try {
-            const [subjectsRes, marksRes] = await Promise.all([
+            const [subjectsRes, marksRes, gradesRes] = await Promise.all([
                 masterAPI.getSubjects(student.class_id),
-                marksAPI.getByStudent(id)
+                marksAPI.getByStudent(id),
+                gradesAPI.getByStudent(id)
             ]);
             setAcademicData({
                 subjects: subjectsRes.data.data,
-                marks: marksRes.data.data.marks
+                marks: marksRes.data.data.marks,
+                grades: gradesRes.data.data.grades || []
             });
         } catch (error) {
             console.error('Failed to fetch academic data:', error);
@@ -127,9 +129,14 @@ const StudentDetails = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link to="/students" className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-900">
-                                <ArrowLeft className="w-6 h-6" />
-                            </Link>
+                            <button
+                                onClick={() => navigate('/students')}
+                                className="flex items-center gap-2 text-gray-400 hover:text-blue-600 transition group mr-2"
+                            >
+                                <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:border-blue-200 group-hover:bg-blue-50 transition">
+                                    <ArrowLeft className="w-4 h-4" />
+                                </div>
+                            </button>
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">{student.first_name} {student.last_name}</h1>
                                 <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
@@ -137,7 +144,7 @@ const StudentDetails = () => {
                                         Active Student
                                     </span>
                                     <span>•</span>
-                                    <span>Reg No: {student.registration_number}</span>
+                                    <span>Roll No: {student.roll_number || '-'}</span>
                                 </p>
                             </div>
                         </div>
@@ -173,7 +180,7 @@ const StudentDetails = () => {
                                 <span className="text-5xl font-bold">{student.first_name.charAt(0)}</span>
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-1">{student.first_name} {student.last_name}</h2>
-                            <p className="text-gray-500 font-medium mb-6">{student.registration_number}</p>
+                            <p className="text-gray-500 font-medium mb-6">Roll No: {student.roll_number || '-'}</p>
 
                             <div className="grid grid-cols-2 gap-4 text-left bg-gray-50 p-4 rounded-xl">
                                 <div>
@@ -278,6 +285,100 @@ const StudentDetails = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Parent Information */}
+                        {(student.father_name || student.mother_name) && (
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                    <User className="w-5 h-5 text-purple-600" />
+                                    Parent Information
+                                </h3>
+
+                                <div className="space-y-8">
+                                    {/* Father Information */}
+                                    {student.father_name && (
+                                        <div>
+                                            <h4 className="text-sm font-bold text-green-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                                                Father Details
+                                            </h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-12 pl-4">
+                                                <div>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Name</p>
+                                                    <p className="font-medium text-gray-900">{displayValue(student.father_name)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Phone</p>
+                                                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                                                        <Phone className="w-4 h-4 text-gray-400" />
+                                                        {displayValue(student.father_phone)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">WhatsApp</p>
+                                                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                                                        <Phone className="w-4 h-4 text-green-500" />
+                                                        {displayValue(student.father_whatsapp)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Email</p>
+                                                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                                                        <Mail className="w-4 h-4 text-gray-400" />
+                                                        {displayValue(student.father_email)}
+                                                    </p>
+                                                </div>
+                                                <div className="sm:col-span-2">
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Occupation</p>
+                                                    <p className="font-medium text-gray-900">{displayValue(student.father_occupation)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Mother Information */}
+                                    {student.mother_name && (
+                                        <div>
+                                            <h4 className="text-sm font-bold text-pink-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-pink-600 rounded-full"></div>
+                                                Mother Details
+                                            </h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-12 pl-4">
+                                                <div>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Name</p>
+                                                    <p className="font-medium text-gray-900">{displayValue(student.mother_name)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Phone</p>
+                                                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                                                        <Phone className="w-4 h-4 text-gray-400" />
+                                                        {displayValue(student.mother_phone)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">WhatsApp</p>
+                                                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                                                        <Phone className="w-4 h-4 text-green-500" />
+                                                        {displayValue(student.mother_whatsapp)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Email</p>
+                                                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                                                        <Mail className="w-4 h-4 text-gray-400" />
+                                                        {displayValue(student.mother_email)}
+                                                    </p>
+                                                </div>
+                                                <div className="sm:col-span-2">
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Occupation</p>
+                                                    <p className="font-medium text-gray-900">{displayValue(student.mother_occupation)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Attendance Information */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
@@ -384,6 +485,7 @@ const StudentDetails = () => {
                                                     <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase tracking-wider text-[10px]">Teacher</th>
                                                     <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase tracking-wider text-[10px]">Exam Name</th>
                                                     <th className="text-center py-3 px-4 font-bold text-gray-700 uppercase tracking-wider text-[10px]">Marks</th>
+                                                    <th className="text-center py-3 px-4 font-bold text-gray-700 uppercase tracking-wider text-[10px]">Grade</th>
                                                     <th className="text-center py-3 px-4 font-bold text-gray-700 uppercase tracking-wider text-[10px]">%</th>
                                                     <th className="text-left py-3 px-4 font-bold text-gray-700 uppercase tracking-wider text-[10px]">Remarks</th>
                                                 </tr>
@@ -449,6 +551,16 @@ const StudentDetails = () => {
                                                                 <span className={`text-sm font-bold ${mark.is_absent ? 'text-red-500' : 'text-blue-600'}`}>
                                                                     {mark.is_absent ? 'ABSENT' : `${parseFloat(mark.marks_obtained)} / ${parseFloat(mark.max_marks)}`}
                                                                 </span>
+                                                            </td>
+                                                            <td className="py-4 px-4 text-center">
+                                                                {(() => {
+                                                                    const gradeInfo = academicData.grades.find(g => g.class_subject_id === subject.id || g.class_subject_id === subject.class_subject_id);
+                                                                    return gradeInfo ? (
+                                                                        <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold">
+                                                                            {gradeInfo.grade_name}
+                                                                        </span>
+                                                                    ) : '-';
+                                                                })()}
                                                             </td>
                                                             <td className="py-4 px-4 text-center">
                                                                 {!mark.is_absent && (

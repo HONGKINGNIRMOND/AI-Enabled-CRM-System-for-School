@@ -4,6 +4,7 @@ const { query } = require('../config/database');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { getStudentGrades, calculateGPA } = require('../controllers/gradeCalculator');
 const PDFDocument = require('pdfkit');
+const ExcelJS = require('exceljs');
 
 // Generate progress card for a student
 router.get('/progress-card/:studentId', authenticateToken, async (req, res) => {
@@ -163,7 +164,7 @@ router.get('/attendance-summary', authenticateToken, authorize('admin', 'teacher
 
         let sql = `
       SELECT 
-        s.registration_number,
+        se.roll_number,
         CONCAT(s.first_name, ' ', s.last_name) as student_name,
         c.class_name,
         sec.section_name,
@@ -302,7 +303,7 @@ router.get('/academic-analytics', async (req, res) => {
         // Top performers (based on marks)
         const topPerformers = await query(
             `SELECT 
-        s.registration_number,
+        se.roll_number,
         CONCAT(s.first_name, ' ', s.last_name) as student_name,
         c.class_name,
         sec.section_name,
@@ -313,7 +314,7 @@ router.get('/academic-analytics', async (req, res) => {
        LEFT JOIN sections sec ON se.section_id = sec.id
        LEFT JOIN internal_marks im ON s.id = im.student_id AND im.academic_year = $${paramIndex}
        ${whereClause}
-       GROUP BY s.id, s.registration_number, student_name, c.class_name, sec.section_name
+       GROUP BY s.id, se.roll_number, student_name, c.class_name, sec.section_name
        HAVING COUNT(im.id) > 0
        ORDER BY avg_percentage DESC
        LIMIT 10`,
@@ -323,7 +324,7 @@ router.get('/academic-analytics', async (req, res) => {
         // Low attendance students (based on actual attendance records)
         const lowAttendance = await query(
             `SELECT 
-        s.registration_number,
+        se.roll_number,
         CONCAT(s.first_name, ' ', s.last_name) as student_name,
         c.class_name,
         sec.section_name,
@@ -338,7 +339,7 @@ router.get('/academic-analytics', async (req, res) => {
        LEFT JOIN sections sec ON se.section_id = sec.id
        LEFT JOIN attendance a ON s.id = a.student_id AND EXTRACT(YEAR FROM a.attendance_date) = $${paramIndex}
        ${whereClause}
-       GROUP BY s.id, s.registration_number, student_name, c.class_name, sec.section_name
+       GROUP BY s.id, se.roll_number, student_name, c.class_name, sec.section_name
        HAVING COUNT(a.id) > 0 AND (SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END)::DECIMAL / COUNT(a.id)) * 100 < 75
        ORDER BY avg_attendance ASC
        LIMIT 10`,
@@ -367,6 +368,107 @@ router.get('/academic-analytics', async (req, res) => {
             message: 'Failed to generate analytics',
             error: error.message
         });
+    }
+});
+
+// Export Class Performance Report (Excel)
+router.get('/class-performance/:classId/export', authenticateToken, authorize('admin', 'teacher'), async (req, res) => {
+    try {
+        const { classId } = req.params;
+        const { academic_year } = req.query;
+        const year = academic_year || process.env.CURRENT_ACADEMIC_YEAR;
+
+        const subjects = await query(
+            `SELECT s.subject_name, ROUND(AVG(sg.percentage), 2) as avg_percentage
+             FROM student_grades sg
+             JOIN class_subjects cs ON sg.class_subject_id = cs.id
+             JOIN subjects s ON cs.subject_id = s.id
+             WHERE cs.class_id = $1 AND sg.academic_year = $2
+             GROUP BY s.subject_name`,
+            [classId, year]
+        );
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Class Performance');
+
+        sheet.columns = [
+            { header: 'Subject', key: 'subject', width: 30 },
+            { header: 'Average Percentage', key: 'percentage', width: 20 }
+        ];
+
+        subjects.forEach(row => {
+            sheet.addRow({ subject: row.subject_name, percentage: row.avg_percentage });
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=class_performance_${year}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Export error:', error);
+        res.status(500).json({ success: false, message: 'Export failed' });
+    }
+});
+
+// Export Attendance Summary (Excel)
+router.get('/attendance-summary/export', authenticateToken, authorize('admin', 'teacher'), async (req, res) => {
+    try {
+        const { class_id, section_id, academic_year, month } = req.query;
+        const year = academic_year || process.env.CURRENT_ACADEMIC_YEAR;
+
+        let sql = `
+            SELECT 
+                se.roll_number,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                c.class_name,
+                sec.section_name,
+                asm.attendance_percentage
+            FROM attendance_summary asm
+            JOIN students s ON asm.student_id = s.id
+            JOIN student_enrollments se ON s.id = se.student_id AND se.is_current = TRUE
+            JOIN classes c ON se.class_id = c.id
+            JOIN sections sec ON se.section_id = sec.id
+            WHERE asm.academic_year = $1
+        `;
+        const params = [year];
+        let paramIndex = 2;
+
+        if (class_id) { sql += ` AND se.class_id = $${paramIndex++}`; params.push(class_id); }
+        if (section_id) { sql += ` AND se.section_id = $${paramIndex++}`; params.push(section_id); }
+        if (month) { sql += ` AND asm.month = $${paramIndex++}`; params.push(month); }
+
+        const data = await query(sql, params);
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Attendance Summary');
+
+        sheet.columns = [
+            { header: 'Reg No', key: 'reg_no', width: 15 },
+            { header: 'Name', key: 'name', width: 30 },
+            { header: 'Class', key: 'class', width: 10 },
+            { header: 'Section', key: 'section', width: 10 },
+            { header: 'Attendance %', key: 'percentage', width: 15 }
+        ];
+
+        data.forEach(row => {
+            sheet.addRow({
+                roll_no: row.roll_number,
+                name: row.student_name,
+                class: row.class_name,
+                section: row.section_name,
+                percentage: row.attendance_percentage
+            });
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=attendance_summary_${year}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Export error:', error);
+        res.status(500).json({ success: false, message: 'Export failed' });
     }
 });
 

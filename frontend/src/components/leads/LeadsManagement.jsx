@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Plus, Edit2, Trash2, Eye, Search, Filter, Download, Upload } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Phone, Plus, Edit2, Trash2, Eye, Search, Filter, Download, Upload, ArrowLeft } from 'lucide-react';
 import LeadForm from './LeadForm';
 import LeadDetails from './LeadDetails';
 import { leadsAPI } from '../../services/api';
 import BulkUploadModal from '../common/BulkUploadModal';
 
 const LeadsManagement = () => {
+    const navigate = useNavigate();
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -127,6 +129,15 @@ const LeadsManagement = () => {
 
     return (
         <div className="p-6">
+            <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition mb-6 group"
+            >
+                <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:border-blue-200 group-hover:bg-blue-50 transition">
+                    <ArrowLeft className="w-4 h-4" />
+                </div>
+                <span className="font-medium">Back to Dashboard</span>
+            </button>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Leads Management</h1>
                 <div className="flex gap-2">

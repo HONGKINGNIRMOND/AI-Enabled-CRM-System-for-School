@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
 
 // Get all classes
 router.get('/classes', async (req, res) => {

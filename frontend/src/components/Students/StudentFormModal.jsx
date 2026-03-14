@@ -19,7 +19,17 @@ const StudentFormModal = ({ student = null, onSave, onCancel }) => {
         class_id: student?.class_id || '',
         section_id: student?.section_id || '',
         assigned_teacher_id: student?.assigned_teacher_id || '',
-        academic_year: new Date().getFullYear().toString()
+        academic_year: new Date().getFullYear().toString(),
+        father_name: student?.father_name || '',
+        father_phone: student?.father_phone || '',
+        father_whatsapp: student?.father_whatsapp || '',
+        father_email: student?.father_email || '',
+        father_occupation: student?.father_occupation || '',
+        mother_name: student?.mother_name || '',
+        mother_phone: student?.mother_phone || '',
+        mother_whatsapp: student?.mother_whatsapp || '',
+        mother_email: student?.mother_email || '',
+        mother_occupation: student?.mother_occupation || ''
     });
 
     const [errors, setErrors] = useState({});
@@ -383,6 +393,136 @@ const StudentFormModal = ({ student = null, onSave, onCancel }) => {
                                     className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
                                 />
                             </div>
+                        </div>
+
+                        <div className="md:col-span-2 flex items-center gap-2 p-3 bg-green-50 border border-green-100 rounded-2xl text-xs font-bold text-green-700 uppercase tracking-wider mt-2">
+                            <Users className="w-4 h-4" />
+                            Father Information
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Father's Name</label>
+                            <input
+                                type="text"
+                                name="father_name"
+                                value={formData.father_name}
+                                onChange={handleChange}
+                                placeholder="John Doe Sr."
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Father's Phone</label>
+                            <input
+                                type="tel"
+                                name="father_phone"
+                                value={formData.father_phone}
+                                onChange={handleChange}
+                                placeholder="+1 234 567 890"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Father's WhatsApp</label>
+                            <input
+                                type="tel"
+                                name="father_whatsapp"
+                                value={formData.father_whatsapp}
+                                onChange={handleChange}
+                                placeholder="+1 234 567 890"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Father's Email</label>
+                            <input
+                                type="email"
+                                name="father_email"
+                                value={formData.father_email}
+                                onChange={handleChange}
+                                placeholder="father@example.com"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Father's Occupation</label>
+                            <input
+                                type="text"
+                                name="father_occupation"
+                                value={formData.father_occupation}
+                                onChange={handleChange}
+                                placeholder="Engineer, Doctor, Business, etc."
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 flex items-center gap-2 p-3 bg-pink-50 border border-pink-100 rounded-2xl text-xs font-bold text-pink-700 uppercase tracking-wider mt-2">
+                            <Users className="w-4 h-4" />
+                            Mother Information
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Mother's Name</label>
+                            <input
+                                type="text"
+                                name="mother_name"
+                                value={formData.mother_name}
+                                onChange={handleChange}
+                                placeholder="Jane Doe"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Mother's Phone</label>
+                            <input
+                                type="tel"
+                                name="mother_phone"
+                                value={formData.mother_phone}
+                                onChange={handleChange}
+                                placeholder="+1 234 567 890"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Mother's WhatsApp</label>
+                            <input
+                                type="tel"
+                                name="mother_whatsapp"
+                                value={formData.mother_whatsapp}
+                                onChange={handleChange}
+                                placeholder="+1 234 567 890"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Mother's Email</label>
+                            <input
+                                type="email"
+                                name="mother_email"
+                                value={formData.mother_email}
+                                onChange={handleChange}
+                                placeholder="mother@example.com"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-700 ml-1">Mother's Occupation</label>
+                            <input
+                                type="text"
+                                name="mother_occupation"
+                                value={formData.mother_occupation}
+                                onChange={handleChange}
+                                placeholder="Teacher, Nurse, Homemaker, etc."
+                                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
+                            />
                         </div>
                     </div>
 

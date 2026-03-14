@@ -1,18 +1,19 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Login from './components/Auth/Login';
+import Login from './components/auth/Login';
 import AdminDashboard from './components/dashboard/AdminDashboard';
 import TeacherDashboard from './components/dashboard/TeacherDashboard';
-import ParentDashboard from './components/dashboard/ParentDashboard';
-import ChildPerformance from './components/dashboard/ChildPerformance';
 import StudentList from './components/Students/StudentList';
 import StudentDetails from './components/Students/StudentDetails';
 import AttendanceMarking from './components/Attendance/AttendanceMarking';
 import AttendanceReports from './components/Reports/AttendanceReports';
 import MarksEntry from './components/Marks/MarksEntry';
-import TeacherManagement from './components/Dashboard/TeacherManagement';
+import TeacherManagement from './components/dashboard/TeacherManagement';
 import Reports from './components/Reports/Reports';
+import FeeManagement from './components/Fees/FeeManagement';
+import AIPredictions from './components/AI/AIPredictions';
+import QuickActionPanel from './components/quick-action/QuickActionPanel';
 import './App.css';
 
 // Protected Route Component
@@ -49,8 +50,6 @@ const DashboardRouter = () => {
       return <AdminDashboard />;
     case 'teacher':
       return <TeacherDashboard />;
-    case 'parent':
-      return <ParentDashboard />;
     default:
       return <Navigate to="/login" replace />;
   }
@@ -127,19 +126,37 @@ function App() {
           />
 
           <Route
-            path="/child-performance/:id"
+            path="/reports"
             element={
-              <ProtectedRoute allowedRoles={['parent']}>
-                <ChildPerformance />
+              <ProtectedRoute>
+                <Reports />
               </ProtectedRoute>
             }
           />
 
           <Route
-            path="/reports"
+            path="/fees"
             element={
-              <ProtectedRoute>
-                <Reports />
+              <ProtectedRoute allowedRoles={['admin']}>
+                <FeeManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-predictions"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+                <AIPredictions />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/quick-action"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <QuickActionPanel />
               </ProtectedRoute>
             }
           />

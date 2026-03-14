@@ -1,11 +1,10 @@
 # School CRM System
 
-A comprehensive School Management CRM System designed to streamline academic and administrative operations. This platform enables administrators, teachers, and parents to effectively manage and track student performance, attendance, and communication.
+A comprehensive School Management CRM System designed to streamline academic and administrative operations. This platform enables administrators and teachers to effectively manage and track student performance, attendance, and communication.
 
 ## Key Features
 - **Comprehensive Administration**: Efficient management of students, teachers, classes, and roles.
 - **Academic Tracking**: Robust systems for recording and monitoring marks, attendance, and exam results.
-- **Parent Portal**: Dedicated interface for parents to track their children's academic progress.
 - **Automated Notifications**: Integrated Email, SMS, and WhatsApp alerts for attendance and performance updates.
 - **Bulk Data Management**: Support for bulk student and data uploads via CSV/Excel.
 - **Secure Authentication**: Role-based access control with JWT-secured endpoints.

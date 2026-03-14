@@ -161,6 +161,8 @@ const createStudent = async (req, res) => {
             });
         }
 
+        const assigned_teacher_id = req.body.assigned_teacher_id || null;
+
         // Check if student with registration number already exists
         const existingStudent = await Student.findOne({
             where: { registrationNumber: registration_number }
@@ -188,6 +190,7 @@ const createStudent = async (req, res) => {
             state: state || null,
             pincode: pincode || null,
             admissionDate: admission_date,
+            assignedTeacherId: assigned_teacher_id,
             isActive: true
         });
 
@@ -332,11 +335,12 @@ const getAllStudents = async (req, res) => {
                 s.updated_at,
                 c.class_name,
                 sec.section_name,
-                NULL as assigned_teacher_name
+                u_teacher.full_name as assigned_teacher_name
             FROM students s
             LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.is_current = true
             LEFT JOIN classes c ON se.class_id = c.id
             LEFT JOIN sections sec ON se.section_id = sec.id
+            LEFT JOIN users u_teacher ON s.assigned_teacher_id = u_teacher.id
             WHERE 1=1 ${searchCondition}
             ORDER BY c.class_name ASC NULLS LAST, sec.section_name ASC NULLS LAST, s.first_name ASC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -413,6 +417,7 @@ const updateStudent = async (req, res) => {
         if (state !== undefined) student.state = state;
         if (pincode !== undefined) student.pincode = pincode;
         if (admission_date !== undefined) student.admissionDate = admission_date;
+        if (req.body.assigned_teacher_id !== undefined) student.assignedTeacherId = req.body.assigned_teacher_id;
         if (is_active !== undefined) student.isActive = is_active;
 
         await student.save();

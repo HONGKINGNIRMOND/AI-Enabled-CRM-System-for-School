@@ -25,12 +25,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         );
     }
 
-    if (user?.role === 'parent') {
-        navItems.push(
-            { path: '/my-children', label: 'My Children', icon: Users }
-        );
-    }
-
     const isActive = (path) => location.pathname === path;
 
     return (

@@ -8,6 +8,7 @@ const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
+const { sendMarksNotification } = require('../services/notificationService');
 
 const upload = multer({
     dest: 'uploads/',
@@ -28,6 +29,22 @@ router.post('/', authenticateToken, authorize('admin', 'teacher'), validate(sche
       DO UPDATE SET marks_obtained = EXCLUDED.marks_obtained, is_absent = EXCLUDED.is_absent, entered_by = EXCLUDED.entered_by, remarks = EXCLUDED.remarks`,
             [student_id, class_subject_id, exam_type_id, academic_year, marks_obtained, max_marks, is_absent, entered_by, remarks]
         );
+
+        // Fetch subject name for notification
+        const subjectResult = await query(
+            `SELECT s.subject_name 
+             FROM class_subjects cs 
+             JOIN subjects s ON cs.subject_id = s.id 
+             WHERE cs.id = $1`,
+            [class_subject_id]
+        );
+
+        if (subjectResult.length > 0) {
+            const subjectName = subjectResult[0].subject_name;
+            // Send notification asynchronously
+            sendMarksNotification(student_id, subjectName, marks_obtained, max_marks)
+                .catch(err => console.error('Failed to send marks notification:', err));
+        }
 
         res.json({
             success: true,
@@ -209,11 +226,16 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
                     .pipe(csv())
                     .on('data', (row) => {
                         try {
+                            const normalizedRow = {};
+                            Object.keys(row).forEach(key => {
+                                normalizedRow[key.toLowerCase().trim()] = row[key];
+                            });
+
                             marksData.push({
-                                student_id: row['Student ID'] || row['student_id'],
-                                registration_number: row['Registration Number'] || row['registration_number'],
-                                marks_obtained: row['Marks'] || row['marks_obtained'],
-                                is_absent: row['Absent'] || row['is_absent'] || false
+                                student_id: normalizedRow['student id'] || normalizedRow['student_id'] || null,
+                                roll_number: normalizedRow['roll number'] || normalizedRow['roll_number'] || normalizedRow['roll no'] || null,
+                                marks_obtained: normalizedRow['marks'] || normalizedRow['marks_obtained'] || normalizedRow['marks obtained'] || 0,
+                                is_absent: normalizedRow['absent'] || normalizedRow['is_absent'] || normalizedRow['status'] === 'Absent' || false
                             });
                         } catch (err) {
                             errors.push({
@@ -230,14 +252,30 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
             await workbook.xlsx.readFile(req.file.path);
             const worksheet = workbook.getWorksheet(1);
 
+            const headerRow = worksheet.getRow(1);
+            const colMap = {};
+            headerRow.eachCell((cell, colNumber) => {
+                const header = cell.value?.toString().toLowerCase().trim();
+                colMap[header] = colNumber;
+            });
+
+            const getVal = (row, ...names) => {
+                for (const name of names) {
+                    const col = colMap[name.toLowerCase()];
+                    if (col) return row.getCell(col).value?.toString().trim();
+                }
+                return null;
+            };
+
             worksheet.eachRow((row, rowNumber) => {
                 if (rowNumber === 1) return; // Skip header
 
                 try {
                     marksData.push({
-                        student_id: row.getCell(1).value, // Can be ID or Reg No, we'll check
-                        marks_obtained: row.getCell(2).value,
-                        is_absent: row.getCell(3).value || false
+                        student_id: getVal(row, 'Student ID', 'student_id'),
+                        roll_number: getVal(row, 'Roll Number', 'roll no', 'roll_number'),
+                        marks_obtained: getVal(row, 'Marks', 'marks_obtained', 'marks obtained'),
+                        is_absent: getVal(row, 'Absent', 'status') === 'Absent' || getVal(row, 'Absent', 'is_absent') === 'true' || false
                     });
                 } catch (error) {
                     errors.push({ row: rowNumber, error: error.message });
@@ -265,17 +303,17 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
                 try {
                     let studentId = mark.student_id;
 
-                    // Resolve Student ID if Registration Number is provided or student_id looks like Reg No
-                    if (mark.registration_number || (typeof studentId === 'string' && isNaN(parseInt(studentId)))) {
-                        const regNo = mark.registration_number || mark.student_id;
+                    // Resolve Student ID if Roll Number is provided or student_id looks like Roll No
+                    if (mark.roll_number || (typeof studentId === 'string' && isNaN(parseInt(studentId)))) {
+                        const rollNo = mark.roll_number || mark.student_id;
                         const studentRes = await conn.query(
-                            'SELECT id FROM students WHERE registration_number = $1',
-                            [regNo.toString()]
+                            'SELECT s.id FROM students s JOIN student_enrollments se ON s.id = se.student_id WHERE se.roll_number = $1 AND se.is_current = TRUE',
+                            [rollNo.toString()]
                         );
                         if (studentRes.length > 0) {
                             studentId = studentRes[0].id;
                         } else {
-                            throw new Error(`Student with Reg No ${regNo} not found`);
+                            throw new Error(`Student with Roll No ${rollNo} not found`);
                         }
                     }
 
@@ -292,7 +330,7 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
                 } catch (error) {
                     failCount++;
                     errors.push({
-                        student_id: mark.student_id || mark.registration_number,
+                        roll_number: mark.roll_number || mark.student_id,
                         error: error.message
                     });
                 }

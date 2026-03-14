@@ -31,9 +31,11 @@ const marksRoutes = require('./routes/marks.routes');
 const gradesRoutes = require('./routes/grades.routes');
 const reportsRoutes = require('./routes/reports.routes');
 const masterRoutes = require('./routes/master.routes');
-const parentRoutes = require('./routes/parent.routes');
 const teacherRoutes = require('./routes/teacher.routes');
 const leadRoutes = require('./routes/leads');
+const feeRoutes = require('./routes/fees');
+const aiRoutes = require('./routes/ai.routes');
+const quickActionRoutes = require('./routes/quick-action.routes');
 
 // Register routes
 app.use('/api/auth', authRoutes);
@@ -43,9 +45,11 @@ app.use('/api/marks', marksRoutes);
 app.use('/api/grades', gradesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/master', masterRoutes);
-app.use('/api/parents', parentRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/fees', feeRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/quick-action', quickActionRoutes);
 
 // Static template files
 app.use('/templates', express.static(path.join(__dirname, 'public', 'templates')));

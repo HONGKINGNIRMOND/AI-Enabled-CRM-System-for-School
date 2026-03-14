@@ -15,8 +15,18 @@ const emailTransporter = nodemailer.createTransport({
 
 // Twilio client for SMS and WhatsApp
 let twilioClient = null;
-if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-    twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+try {
+    if (process.env.TWILIO_ACCOUNT_SID &&
+        process.env.TWILIO_AUTH_TOKEN &&
+        process.env.TWILIO_ACCOUNT_SID.startsWith('AC') &&
+        process.env.TWILIO_ACCOUNT_SID !== 'your_twilio_account_sid') {
+        twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        console.log('Twilio client initialized');
+    } else {
+        console.warn('Twilio credentials missing or invalid (Skipping SMS/WhatsApp)');
+    }
+} catch (error) {
+    console.error('Failed to initialize Twilio client:', error.message);
 }
 
 /**
@@ -108,17 +118,6 @@ async function sendNotification(recipientId, recipientType, notificationTypeId, 
         if (recipientType === 'user') {
             const users = await query('SELECT email, phone FROM users WHERE id = $1', [recipientId]);
             if (users.length > 0) contactInfo = users[0];
-        } else if (recipientType === 'parent') {
-            const parents = await query('SELECT email, phone FROM parents WHERE id = $1', [recipientId]);
-            if (parents.length > 0) contactInfo = parents[0];
-        }
-
-        if (!contactInfo) {
-            await query(
-                'UPDATE notifications SET status = $1, error_message = $2 WHERE id = $3',
-                ['failed', 'Recipient contact info not found', notificationId]
-            );
-            return { success: false, error: 'Contact info not found' };
         }
 
         // Send via appropriate channel
@@ -164,98 +163,9 @@ async function sendNotification(recipientId, recipientType, notificationTypeId, 
     }
 }
 
-/**
- * Send attendance notification to parents
- */
-async function sendAttendanceNotification(studentId, attendanceDate, status) {
-    try {
-        if (process.env.ATTENDANCE_NOTIFICATION_ENABLED !== 'true') {
-            return { success: false, message: 'Attendance notifications disabled' };
-        }
-
-        // Get student and parent info
-        const studentInfo = await query(
-            `SELECT 
-        s.first_name, s.last_name, s.registration_number,
-        p.id as parent_id, p.first_name as parent_first_name, p.phone, p.email
-       FROM students s
-       JOIN student_parents sp ON s.id = sp.student_id
-       JOIN parents p ON sp.parent_id = p.id
-       WHERE s.id = $1 AND sp.is_primary_contact = TRUE`,
-            [studentId]
-        );
-
-        if (studentInfo.length === 0) {
-            return { success: false, message: 'No primary contact found' };
-        }
-
-        const student = studentInfo[0];
-        const title = `Attendance Update - ${student.first_name} ${student.last_name}`;
-        const message = `Dear ${student.parent_first_name},\n\nYour child ${student.first_name} ${student.last_name} (${student.registration_number}) was marked ${status} on ${attendanceDate}.\n\nRegards,\n${process.env.SCHOOL_NAME}`;
-
-        // Get notification type ID
-        const notificationType = await query(
-            "SELECT id FROM notification_types WHERE type_name = 'attendance'"
-        );
-
-        // Send via email and SMS
-        await sendNotification(student.parent_id, 'parent', notificationType[0].id, title, message, 'email');
-        await sendNotification(student.parent_id, 'parent', notificationType[0].id, title, message, 'sms');
-
-        return { success: true };
-    } catch (error) {
-        console.error('Send attendance notification error:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-/**
- * Send marks notification to parents
- */
-async function sendMarksNotification(studentId, subjectName, marks, maxMarks) {
-    try {
-        if (process.env.MARKS_NOTIFICATION_ENABLED !== 'true') {
-            return { success: false, message: 'Marks notifications disabled' };
-        }
-
-        const studentInfo = await query(
-            `SELECT 
-        s.first_name, s.last_name, s.registration_number,
-        p.id as parent_id, p.first_name as parent_first_name
-       FROM students s
-       JOIN student_parents sp ON s.id = sp.student_id
-       JOIN parents p ON sp.parent_id = p.id
-       WHERE s.id = $1 AND sp.is_primary_contact = TRUE`,
-            [studentId]
-        );
-
-        if (studentInfo.length === 0) {
-            return { success: false, message: 'No primary contact found' };
-        }
-
-        const student = studentInfo[0];
-        const percentage = ((marks / maxMarks) * 100).toFixed(2);
-        const title = `Marks Update - ${subjectName}`;
-        const message = `Dear ${student.parent_first_name},\n\nMarks for ${student.first_name} ${student.last_name} in ${subjectName}:\nMarks: ${marks}/${maxMarks} (${percentage}%)\n\nRegards,\n${process.env.SCHOOL_NAME}`;
-
-        const notificationType = await query(
-            "SELECT id FROM notification_types WHERE type_name = 'marks'"
-        );
-
-        await sendNotification(student.parent_id, 'parent', notificationType[0].id, title, message, 'email');
-
-        return { success: true };
-    } catch (error) {
-        console.error('Send marks notification error:', error);
-        return { success: false, error: error.message };
-    }
-}
-
 module.exports = {
     sendEmail,
     sendSMS,
     sendWhatsApp,
-    sendNotification,
-    sendAttendanceNotification,
-    sendMarksNotification
+    sendNotification
 };

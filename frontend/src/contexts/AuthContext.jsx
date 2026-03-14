@@ -1,29 +1,38 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import { authAPI } from '../services/api';
+
+/* eslint-disable react-refresh/only-export-components */
 
 const AuthContext = createContext(null);
 
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
+// Initialize user state from localStorage
+const getInitialUser = () => {
+    try {
+        const storedUser = localStorage.getItem('user');
+        const token = localStorage.getItem('accessToken');
+        if (storedUser && token) {
+            return JSON.parse(storedUser);
+        }
+    } catch (error) {
+        console.error('Error parsing stored user:', error);
     }
-    return context;
+    return null;
 };
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(getInitialUser);
 
     useEffect(() => {
-        // Check if user is logged in
-        const storedUser = localStorage.getItem('user');
-        const token = localStorage.getItem('accessToken');
-
-        if (storedUser && token) {
-            setUser(JSON.parse(storedUser));
+        // Validate token on mount if user exists
+        const currentUser = getInitialUser();
+        if (currentUser) {
+            authAPI.getProfile().catch(() => {
+                // Token is invalid, clear auth state
+                localStorage.removeItem('user');
+                localStorage.removeItem('accessToken');
+                setUser(null);
+            });
         }
-        setLoading(false);
     }, []);
 
     const login = async (email, password) => {
@@ -52,11 +61,18 @@ export const AuthProvider = ({ children }) => {
 
     const value = {
         user,
-        loading,
         login,
         logout,
         isAuthenticated: !!user
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within AuthProvider');
+    }
+    return context;
 };

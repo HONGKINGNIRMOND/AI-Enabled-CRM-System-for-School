@@ -6,6 +6,9 @@ const { authenticateToken, authorize } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validator');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
+const path = require('path');
+const fs = require('fs');
+const csv = require('csv-parser');
 
 const upload = multer({
     dest: 'uploads/',
@@ -134,16 +137,31 @@ router.post('/bulk', authenticateToken, authorize('admin'), upload.single('file'
             await workbook.xlsx.readFile(req.file.path);
             const worksheet = workbook.getWorksheet(1);
 
+            const headerRow = worksheet.getRow(1);
+            const colMap = {};
+            headerRow.eachCell((cell, colNumber) => {
+                const header = cell.value?.toString().toLowerCase().trim();
+                colMap[header] = colNumber;
+            });
+
+            const getVal = (row, ...names) => {
+                for (const name of names) {
+                    const col = colMap[name.toLowerCase()];
+                    if (col) return row.getCell(col).value?.toString().trim();
+                }
+                return null;
+            };
+
             worksheet.eachRow((row, rowNumber) => {
                 if (rowNumber === 1) return; // Skip header
 
                 try {
                     teachers.push({
-                        username: row.getCell(1).value?.toString().trim(),
-                        full_name: row.getCell(2).value?.toString().trim(),
-                        email: row.getCell(3).value?.toString().trim(),
-                        phone: row.getCell(4).value?.toString().trim() || null,
-                        password: row.getCell(5).value?.toString().trim()
+                        username: getVal(row, 'Username', 'username'),
+                        full_name: getVal(row, 'Full Name', 'full_name', 'fullname'),
+                        email: getVal(row, 'Email', 'email'),
+                        phone: getVal(row, 'Phone', 'phone', 'mobile') || null,
+                        password: getVal(row, 'Password', 'password')
                     });
                 } catch (error) {
                     errors.push({

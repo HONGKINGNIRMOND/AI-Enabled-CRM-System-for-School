@@ -1,6 +1,7 @@
 const { Student, Subject, Mark, Fee } = require('../models/school');
 const { Sequelize } = require('sequelize');
 const { cleanValue, toNumber } = require('./fileParserService');
+const { generateRollNumberForAcademicYear } = require('../utils/rollNumberGenerator');
 
 /**
  * Calculate grade based on percentage
@@ -252,12 +253,14 @@ const enrollStudentInClass = async (studentId, className, sectionName, academicY
             [classId, sectionId, studentId, year]
         );
     } else {
-        // Create new enrollment
+        // Create new enrollment - generate automatic roll number
+        const rollNumber = await generateRollNumberForAcademicYear(year);
+
         await query(
             `INSERT INTO student_enrollments 
              (student_id, class_id, section_id, academic_year, enrollment_date, is_current, roll_number) 
              VALUES ($1, $2, $3, $4, $5, true, $6)`,
-            [studentId, classId, sectionId, year, new Date(), 'ROLL_' + studentId]
+            [studentId, classId, sectionId, year, new Date(), rollNumber]
         );
     }
 };
@@ -304,7 +307,7 @@ const calculateClassRankings = async (classValue, section = null) => {
     const studentsQuery = `
         SELECT 
             s.id,
-            s.registration_number,
+            se.roll_number,
             s.first_name,
             s.last_name,
             s.is_active,
@@ -313,7 +316,7 @@ const calculateClassRankings = async (classValue, section = null) => {
         JOIN student_enrollments se ON s.id = se.student_id
         LEFT JOIN internal_marks im ON s.id = im.student_id
         WHERE ${whereClause}
-        GROUP BY s.id, s.registration_number, s.first_name, s.last_name, s.is_active
+        GROUP BY s.id, se.roll_number, s.first_name, s.last_name, s.is_active
         ORDER BY avg_percentage DESC, s.first_name ASC
     `;
 

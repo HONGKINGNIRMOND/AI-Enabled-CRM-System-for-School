@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { studentsAPI } from '../../services/api';
 import { Search, Plus, Upload, ArrowLeft, Trash2, Ban, CheckCircle } from 'lucide-react';
 import BulkUploadModal from '../common/BulkUploadModal';
 import StudentFormModal from './StudentFormModal';
 
 const StudentList = () => {
+    const navigate = useNavigate();
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -71,11 +72,17 @@ const StudentList = () => {
         <div className="min-h-screen bg-gray-50">
             <header className="bg-white shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition mb-6 group"
+                    >
+                        <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:border-blue-200 group-hover:bg-blue-50 transition">
+                            <ArrowLeft className="w-4 h-4" />
+                        </div>
+                        <span className="font-medium">Back to Dashboard</span>
+                    </button>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link to="/" className="text-gray-600 hover:text-gray-900">
-                                <ArrowLeft className="w-6 h-6" />
-                            </Link>
                             <h1 className="text-2xl font-bold text-gray-900">Students</h1>
                         </div>
                         <div className="flex gap-2">
@@ -108,7 +115,7 @@ const StudentList = () => {
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
                                 type="text"
-                                placeholder="Search students by name or registration number..."
+                                placeholder="Search students by name or roll number..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -129,7 +136,7 @@ const StudentList = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b">
-                                        <th className="text-left py-3 px-4 text-gray-700">Reg. No</th>
+                                        <th className="text-left py-3 px-4 text-gray-700">Roll No</th>
                                         <th className="text-left py-3 px-4 text-gray-700">Name</th>
                                         <th className="text-left py-3 px-4 text-gray-700">Class</th>
                                         <th className="text-left py-3 px-4 text-gray-700">Section</th>
@@ -142,7 +149,7 @@ const StudentList = () => {
                                 <tbody>
                                     {students.map((student) => (
                                         <tr key={student.id} className="border-b hover:bg-gray-50">
-                                            <td className="py-3 px-4">{student.registration_number}</td>
+                                            <td className="py-3 px-4">{student.roll_number || '-'}</td>
                                             <td className="py-3 px-4 font-medium">
                                                 {student.first_name} {student.last_name}
                                             </td>

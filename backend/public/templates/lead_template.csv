@@ -1,3 +1,4 @@
-Name,Email,Phone,Company,Source
-Prospective Student,student@example.com,555-0101,ABC High,Website
-Parent Inquiry,parent@example.com,555-0102,XYZ Corp,Referral
+Name,Email,Phone,Company,Status,Last Contact Date,Source
+John Doe,john.doe@example.com,555-1234,Acme Corp,New,2024-01-15,Website
+Jane Smith,jane.smith@example.com,555-5678,Tech Solutions,Contacted,2024-01-14,Referral
+Bob Wilson,bob.wilson@example.com,555-9012,Global Industries,Qualified,2024-01-13,Email

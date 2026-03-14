@@ -105,7 +105,6 @@ const Login = () => {
                     <div className="mt-2 text-xs text-gray-500 space-y-1">
                         <p>Admin: admin@school.com / admin123</p>
                         <p>Teacher: teacher@school.com / teacher123</p>
-                        <p>Parent: parent@school.com / parent123</p>
                     </div>
                 </div>
             </div>

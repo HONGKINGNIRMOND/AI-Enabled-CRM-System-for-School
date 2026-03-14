@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { teachersAPI, masterAPI } from '../../services/api';
-import { Users, BookOpen, Plus, Trash2, CheckCircle2, AlertCircle, Loader2, Upload, ArrowLeft } from 'lucide-react';
+import { Users, BookOpen, Plus, Trash2, CheckCircle2, AlertCircle, Loader2, Upload, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import BulkUploadModal from '../common/BulkUploadModal';
 
 const TeacherManagement = () => {
@@ -29,6 +29,7 @@ const TeacherManagement = () => {
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
     const [newTeacher, setNewTeacher] = useState({
         username: '',
         email: '',
@@ -170,15 +171,15 @@ const TeacherManagement = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="mb-6">
-                <button
-                    onClick={() => navigate('/admin')}
-                    className="flex items-center gap-2 text-gray-600 hover:text-blue-600 font-bold transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                    Back to Dashboard
-                </button>
-            </div>
+            <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition mb-6 group"
+            >
+                <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:border-blue-200 group-hover:bg-blue-50 transition">
+                    <ArrowLeft className="w-4 h-4" />
+                </div>
+                <span className="font-medium">Back to Dashboard</span>
+            </button>
 
             <div className="flex items-center justify-between mb-8">
                 <div>
@@ -525,14 +526,28 @@ const TeacherManagement = () => {
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-gray-500 uppercase ml-1">Password {isEditing && '(Leave blank to keep current)'}</label>
-                                <input
-                                    required={!isEditing}
-                                    type="password"
-                                    value={newTeacher.password}
-                                    onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
-                                    placeholder={isEditing ? '••••••••' : 'Min 6 characters'}
-                                />
+                                <div className="relative">
+                                    <input
+                                        required={!isEditing}
+                                        type={showPassword ? "text" : "password"}
+                                        value={newTeacher.password}
+                                        onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
+                                        className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                        placeholder={isEditing ? '••••••••' : 'Min 6 characters'}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                                        title={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="w-5 h-5" />
+                                        ) : (
+                                            <Eye className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-gray-500 uppercase ml-1">Phone (Optional)</label>

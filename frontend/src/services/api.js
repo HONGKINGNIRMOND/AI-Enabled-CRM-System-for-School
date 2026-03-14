@@ -26,11 +26,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Token expired or invalid
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
+        if (error.response?.status === 401 || error.response?.status === 403) {
+            // Token expired, invalid, or user not found
+            const message = error.response?.data?.message || '';
+            // Only redirect if it's an auth failure (not a permissions error on a valid route)
+            const authErrors = ['Invalid or expired token', 'Access token required', 'User not found', 'User inactive'];
+            if (authErrors.some(e => message.includes(e))) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
@@ -139,10 +144,6 @@ export const teachersAPI = {
     removeClassTeacher: (sectionId) => api.delete(`/teachers/assign-class-teacher/${sectionId}`)
 };
 
-// Parent API
-export const parentsAPI = {
-    getChildren: () => api.get('/parents/my-children')
-};
 
 // Leads API
 export const leadsAPI = {
@@ -159,6 +160,25 @@ export const leadsAPI = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
     }
+};
+
+// Fees API
+export const feesAPI = {
+    getStudentStatus: (regNo, params) => api.get(`/fees/student/${regNo}`, { params }),
+    getClassStatus: (params) => api.get('/fees/class', { params }),
+    getPending: (params) => api.get('/fees/pending', { params }),
+    create: (data) => api.post('/fees', data),
+    update: (id, data) => api.put(`/fees/${id}`, data),
+    getStatistics: (params) => api.get('/fees/statistics', { params }),
+    getClassWiseStatistics: (params) => api.get('/fees/class-wise-statistics', { params }),
+    sendReminder: (id) => api.post(`/fees/${id}/remind`)
+};
+
+// AI API
+export const aiAPI = {
+    getAttendancePredictions: () => api.get('/ai/attendance-predictions'),
+    getPerformanceAnalysis: (studentId) => api.get(`/ai/performance-analysis/${studentId}`),
+    getOverallInsights: () => api.get('/ai/insights')
 };
 
 export default api;

@@ -8,6 +8,7 @@ const authenticateToken = async (req, res, next) => {
         const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
         if (!token) {
+            console.log('Auth Debug: No token provided');
             return res.status(401).json({
                 success: false,
                 message: 'Access token required'
@@ -16,7 +17,8 @@ const authenticateToken = async (req, res, next) => {
 
         jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
             if (err) {
-                return res.status(403).json({
+                console.log('Auth Debug: Token verification failed', err.message);
+                return res.status(401).json({
                     success: false,
                     message: 'Invalid or expired token'
                 });
@@ -32,10 +34,19 @@ const authenticateToken = async (req, res, next) => {
                 [decoded.userId]
             );
 
-            if (users.length === 0 || !users[0].is_active) {
-                return res.status(403).json({
+            if (users.length === 0) {
+                console.log('Auth Debug: User not found', decoded.userId);
+                return res.status(401).json({
                     success: false,
-                    message: 'User not found or inactive'
+                    message: 'User not found'
+                });
+            }
+
+            if (!users[0].is_active) {
+                console.log('Auth Debug: User inactive', users[0].username);
+                return res.status(401).json({
+                    success: false,
+                    message: 'User inactive'
                 });
             }
 
@@ -48,6 +59,7 @@ const authenticateToken = async (req, res, next) => {
                 role: users[0].role_name
             };
 
+            console.log(`Auth Debug: User ${req.user.username} authenticated with role ${req.user.role}`);
             next();
         });
     } catch (error) {

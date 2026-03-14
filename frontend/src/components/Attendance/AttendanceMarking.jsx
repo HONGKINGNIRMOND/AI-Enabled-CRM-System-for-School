@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Save, RefreshCw, Check, X as CloseIcon, Upload } from 'lucide-react';
 import { attendanceAPI, masterAPI } from '../../services/api';
 import BulkUploadModal from '../common/BulkUploadModal';
 
 const AttendanceMarking = () => {
+    const navigate = useNavigate();
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [classId, setClassId] = useState('');
     const [sectionId, setSectionId] = useState('');
@@ -80,7 +81,7 @@ const AttendanceMarking = () => {
                 .filter(r => !r.session || r.session === session)
                 .map(record => ({
                     student_id: record.id,
-                    registration_number: record.registration_number,
+                    roll_number: record.roll_number,
                     student_name: record.student_name,
                     roll_number: record.roll_number,
                     status: record.status || 'Present'
@@ -221,11 +222,17 @@ const AttendanceMarking = () => {
         <div className="min-h-screen bg-gray-50">
             <header className="bg-white shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition mb-6 group"
+                    >
+                        <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:border-blue-200 group-hover:bg-blue-50 transition">
+                            <ArrowLeft className="w-4 h-4" />
+                        </div>
+                        <span className="font-medium">Back to Dashboard</span>
+                    </button>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link to="/" className="text-gray-600 hover:text-gray-900">
-                                <ArrowLeft className="w-6 h-6" />
-                            </Link>
                             <h1 className="text-2xl font-bold text-gray-900">Mark Attendance</h1>
                         </div>
                         <button

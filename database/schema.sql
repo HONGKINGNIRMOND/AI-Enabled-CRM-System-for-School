@@ -20,9 +20,8 @@ $$ language 'plpgsql';
 -- ENUM Types
 DO $$ BEGIN
     CREATE TYPE user_gender AS ENUM('Male', 'Female', 'Other');
-    CREATE TYPE parent_relationship AS ENUM('Father', 'Mother', 'Guardian');
     CREATE TYPE attendance_status_enum AS ENUM('Present', 'Absent', 'Late', 'Excused');
-    CREATE TYPE notification_recipient_type AS ENUM('user', 'parent', 'student');
+    CREATE TYPE notification_recipient_type AS ENUM('user', 'student');
     CREATE TYPE notification_channel AS ENUM('sms', 'email', 'whatsapp', 'in-app');
     CREATE TYPE notification_status AS ENUM('pending', 'sent', 'failed', 'read');
 EXCEPTION
@@ -230,33 +229,6 @@ CREATE INDEX idx_enrollments_academic_year ON student_enrollments (academic_year
 
 CREATE INDEX idx_enrollments_current ON student_enrollments (is_current);
 
--- ============================================
--- PARENT INFORMATION TABLES (DISABLED)
--- ============================================
-
--- Parents Table (Disabled - no constraints)
--- CREATE TABLE parents (
---     id SERIAL PRIMARY KEY,
---     user_id INT UNIQUE,
---     first_name VARCHAR(100) NOT NULL,
---     last_name VARCHAR(100) NOT NULL,
---     relationship parent_relationship NOT NULL,
---     phone VARCHAR(20) NOT NULL,
---     email VARCHAR(255),
---     occupation VARCHAR(100),
---     address TEXT,
---     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
---     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
--- );
-
--- Student-Parent Mapping (Disabled - no constraints)
--- CREATE TABLE student_parents (
---     id SERIAL PRIMARY KEY,
---     student_id INT NOT NULL,
---     parent_id INT NOT NULL,
---     is_primary_contact BOOLEAN DEFAULT FALSE,
---     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
--- );
 
 -- ============================================
 -- ATTENDANCE TABLES

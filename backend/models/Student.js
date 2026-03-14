@@ -80,6 +80,65 @@ const Student = sequelize.define('Student', {
         field: 'photo_url',
         allowNull: true
     },
+    assignedTeacherId: {
+        type: DataTypes.INTEGER,
+        field: 'assigned_teacher_id',
+        allowNull: true,
+        references: {
+            model: 'users',
+            key: 'id'
+        }
+    },
+    fatherName: {
+        type: DataTypes.STRING(255),
+        field: 'father_name',
+        allowNull: true
+    },
+    fatherPhone: {
+        type: DataTypes.STRING(20),
+        field: 'father_phone',
+        allowNull: true
+    },
+    fatherWhatsapp: {
+        type: DataTypes.STRING(20),
+        field: 'father_whatsapp',
+        allowNull: true
+    },
+    fatherEmail: {
+        type: DataTypes.STRING(255),
+        field: 'father_email',
+        allowNull: true
+    },
+    fatherOccupation: {
+        type: DataTypes.STRING(100),
+        field: 'father_occupation',
+        allowNull: true
+    },
+    motherName: {
+        type: DataTypes.STRING(255),
+        field: 'mother_name',
+        allowNull: true
+    },
+    motherPhone: {
+        type: DataTypes.STRING(20),
+        field: 'mother_phone',
+        allowNull: true
+    },
+    motherWhatsapp: {
+        type: DataTypes.STRING(20),
+        field: 'mother_whatsapp',
+        allowNull: true
+    },
+    motherEmail: {
+        type: DataTypes.STRING(255),
+        field: 'mother_email',
+        allowNull: true
+    },
+    motherOccupation: {
+        type: DataTypes.STRING(100),
+        field: 'mother_occupation',
+        allowNull: true
+    },
     isActive: {
         type: DataTypes.BOOLEAN,
         field: 'is_active',

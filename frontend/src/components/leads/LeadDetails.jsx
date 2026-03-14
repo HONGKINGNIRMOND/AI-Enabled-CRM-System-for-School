@@ -34,10 +34,12 @@ const LeadDetails = ({ lead, onBack, onEdit, onDelete, onInitiateCall }) => {
             <div className="flex justify-between items-center mb-6">
                 <button
                     onClick={onBack}
-                    className="flex items-center text-blue-600 hover:text-blue-800"
+                    className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition group"
                 >
-                    <ArrowLeft size={18} className="mr-1" />
-                    Back to Leads
+                    <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:border-blue-200 group-hover:bg-blue-50 transition">
+                        <ArrowLeft className="w-4 h-4" />
+                    </div>
+                    <span className="font-medium">Back to Leads</span>
                 </button>
                 <div className="flex space-x-2">
                     <button

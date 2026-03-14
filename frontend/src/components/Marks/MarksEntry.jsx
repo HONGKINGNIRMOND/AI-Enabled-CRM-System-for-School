@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, RefreshCw, Check, AlertCircle, X as CloseIcon } from 'lucide-react';
 import { marksAPI, gradesAPI, masterAPI } from '../../services/api';
 import BulkUploadModal from '../common/BulkUploadModal';
@@ -15,7 +15,7 @@ const StudentMarkRow = React.memo(({ student, onMarkChange }) => {
                     </div>
                     <div>
                         <p className="font-bold text-gray-900">{student.student_name}</p>
-                        <p className="text-xs text-gray-500">{student.registration_number}</p>
+                        <p className="text-xs text-gray-500">Roll: {student.roll_number}</p>
                     </div>
                 </div>
             </td>
@@ -63,7 +63,7 @@ const StudentMarkCard = React.memo(({ student, onMarkChange }) => {
                 <div className="flex-1">
                     <p className="font-bold text-gray-900">{student.student_name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-gray-400">{student.registration_number}</span>
+                        <span className="text-[10px] text-gray-400">Roll: {student.roll_number}</span>
                     </div>
                 </div>
                 <div className="flex flex-col items-center gap-1">
@@ -107,6 +107,7 @@ const StudentMarkCard = React.memo(({ student, onMarkChange }) => {
 });
 
 const MarksEntry = () => {
+    const navigate = useNavigate();
     const [classId, setClassId] = useState('');
     const [sectionId, setSectionId] = useState('');
     const [subjectId, setSubjectId] = useState('');
@@ -189,7 +190,7 @@ const MarksEntry = () => {
             setClassSubjectId(response.data.data.class_subject_id);
             const records = response.data.data.marks.map(record => ({
                 student_id: record.student_id,
-                registration_number: record.registration_number,
+                roll_number: record.roll_number,
                 student_name: record.student_name,
                 roll_number: record.roll_number,
                 marks_obtained: record.marks_obtained !== null && record.marks_obtained !== undefined ? record.marks_obtained : '',
@@ -289,29 +290,34 @@ const MarksEntry = () => {
         <div className="min-h-screen bg-gray-50">
             <header className="bg-white shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition mb-6 group"
+                    >
+                        <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 group-hover:border-blue-200 group-hover:bg-blue-50 transition">
+                            <ArrowLeft className="w-4 h-4" />
+                        </div>
+                        <span className="font-medium">Back to Dashboard</span>
+                    </button>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link to="/" className="text-gray-600 hover:text-gray-900">
-                                <ArrowLeft className="w-6 h-6" />
-                            </Link>
                             <h1 className="text-2xl font-bold text-gray-900">Enter Marks</h1>
                         </div>
                         <button
                             onClick={() => {
                                 if (!classSubjectId || !examId) {
-                                    setMessage({ 
-                                        type: 'error', 
-                                        text: 'Please select Class, Subject, and Exam Type before uploading marks.' 
+                                    setMessage({
+                                        type: 'error',
+                                        text: 'Please select Class, Subject, and Exam Type before uploading marks.'
                                     });
                                     return;
                                 }
                                 setShowBulkModal(true);
                             }}
-                            className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition ${
-                                !classSubjectId || !examId 
-                                    ? 'bg-gray-400 cursor-not-allowed' 
-                                    : 'bg-green-600 hover:bg-green-700'
-                            }`}
+                            className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition ${!classSubjectId || !examId
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-green-600 hover:bg-green-700'
+                                }`}
                         >
                             <Upload className="w-4 h-4" />
                             Bulk Upload

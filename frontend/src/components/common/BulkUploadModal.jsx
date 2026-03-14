@@ -74,8 +74,8 @@ const BulkUploadModal = ({ title, onUpload, onCancel, templateLink }) => {
                                         <p className="font-bold mb-2">Template Formats:</p>
                                         <p>• <strong>Students:</strong> First Name, Last Name, Date of Birth, Gender, Blood Group, Phone, Email, Admission, Class, Section, Academic Year, Address, City, State, Pincode, Parent Name, Parent Phone, Parent Email</p>
                                         <p>• <strong>Teachers:</strong> Username, Full Name, Email, Phone, Password</p>
-                                        <p>• <strong>Marks:</strong> Registration Number, Student Name, Subject, Exam Type, Marks, Max Marks, Grade</p>
-                                        <p>• <strong>Attendance:</strong> Registration Number, Status, Date, Session, Remarks</p>
+                                        <p>• <strong>Marks:</strong> Roll Number, Student Name, Subject, Exam Type, Marks, Max Marks, Grade</p>
+                                        <p>• <strong>Attendance:</strong> Roll Number, Status, Date, Session, Remarks</p>
                                         <p>• <strong>Leads:</strong> Name, Email, Phone, Company, Status, Last Contact Date, Source</p>
                                     </div>
                                     {templateLink && (
@@ -90,7 +90,7 @@ const BulkUploadModal = ({ title, onUpload, onCancel, templateLink }) => {
                                             </a>
                                             <div className="flex gap-2">
                                                 <a
-                                                    href="http://localhost:3001/templates/student_bulk_template.xlsx"
+                                                    href={`${window.location.protocol}//${window.location.hostname}:3001/templates/student_bulk_template.xlsx`}
                                                     className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600 transition-colors"
                                                     download
                                                 >
@@ -98,7 +98,7 @@ const BulkUploadModal = ({ title, onUpload, onCancel, templateLink }) => {
                                                     Excel Version
                                                 </a>
                                                 <a
-                                                    href="http://localhost:3001/templates/student_bulk_template.csv"
+                                                    href={`${window.location.protocol}//${window.location.hostname}:3001/templates/student_bulk_template.csv`}
                                                     className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600 transition-colors"
                                                     download
                                                 >
@@ -212,7 +212,7 @@ const BulkUploadModal = ({ title, onUpload, onCancel, templateLink }) => {
                                                     <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
                                                     <div className="text-sm">
                                                         <span className="font-bold text-gray-900">
-                                                            {err.registration_number || `Row ${err.row}`}
+                                                            {err.roll_number || err.username || err.registration_number || `Row ${err.row}`}
                                                         </span>
                                                         <p className="text-red-500 mt-0.5">{err.error}</p>
                                                     </div>

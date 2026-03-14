@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, Users, TrendingUp, Activity, RefreshCw } from 'lucide-react';
+import DateTimeDisplay from '../common/DateTimeDisplay';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const StatCard = ({ icon, title, value, color, loading }) => {
@@ -117,7 +118,10 @@ const Dashboard = () => {
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+            <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+                <DateTimeDisplay />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatCard

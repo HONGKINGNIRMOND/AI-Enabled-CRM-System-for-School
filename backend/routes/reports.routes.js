@@ -219,7 +219,9 @@ router.get('/attendance-summary', authenticateToken, authorize('admin', 'teacher
 router.get('/academic-analytics', async (req, res) => {
     try {
         const { academic_year, class_id, section_id } = req.query;
-        const year = academic_year || new Date().getFullYear().toString();
+        const year = academic_year || process.env.CURRENT_ACADEMIC_YEAR || '2026-2027';
+        const yearStart = parseInt(year.split('-')[0]);
+        const yearEnd = yearStart + 1;
 
         // Build WHERE clause for filtering
         let whereClause = 'WHERE s.is_active = TRUE';
@@ -227,13 +229,15 @@ router.get('/academic-analytics', async (req, res) => {
         let paramIndex = 1;
 
         if (class_id) {
-            whereClause += ` AND se.class_id = $${paramIndex++}`;
+            whereClause += ` AND se.class_id = $${paramIndex}`;
             params.push(class_id);
+            paramIndex++;
         }
 
         if (section_id) {
-            whereClause += ` AND se.section_id = $${paramIndex++}`;
+            whereClause += ` AND se.section_id = $${paramIndex}`;
             params.push(section_id);
+            paramIndex++;
         }
 
         // Total students count
@@ -246,8 +250,7 @@ router.get('/academic-analytics', async (req, res) => {
         );
         const total_students = parseInt(totalStudentsResult[0].total_students);
 
-        // Calculate average attendance properly by class/section
-        // This calculates the average attendance percentage for each enrolled student
+        // Calculate average attendance
         const avgAttendanceResult = await query(
             `SELECT 
        CASE 
@@ -266,15 +269,17 @@ router.get('/academic-analytics', async (req, res) => {
              ELSE 0 
            END as rate
          FROM attendance 
-         WHERE EXTRACT(YEAR FROM attendance_date) = $${paramIndex}
+         WHERE EXTRACT(YEAR FROM attendance_date) IN ($${paramIndex}, $${paramIndex + 1})
          GROUP BY student_id
        ) student_attendance ON s.id = student_attendance.student_id
        ${whereClause}`,
-            [...params, year]
+            [...params, yearStart, yearEnd]
         );
 
-        // Calculate average performance properly by class/section
-        // This calculates the average performance percentage for each student
+        // For performance-related queries, academic year will be the next parameter
+        const academicYearParamIndex = params.length + 1;
+
+        // Calculate average performance
         const avgPerformanceResult = await query(
             `SELECT 
        CASE 
@@ -293,14 +298,14 @@ router.get('/academic-analytics', async (req, res) => {
              ELSE 0 
            END as rate
          FROM internal_marks 
-         WHERE academic_year = $${paramIndex}
+         WHERE academic_year = $${academicYearParamIndex}
          GROUP BY student_id
        ) student_performance ON s.id = student_performance.student_id
        ${whereClause}`,
             [...params, year]
         );
 
-        // Top performers (based on marks)
+        // Top performers
         const topPerformers = await query(
             `SELECT 
         se.roll_number,
@@ -312,7 +317,7 @@ router.get('/academic-analytics', async (req, res) => {
        LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.is_current = TRUE
        LEFT JOIN classes c ON se.class_id = c.id
        LEFT JOIN sections sec ON se.section_id = sec.id
-       LEFT JOIN internal_marks im ON s.id = im.student_id AND im.academic_year = $${paramIndex}
+       LEFT JOIN internal_marks im ON s.id = im.student_id AND im.academic_year = $${academicYearParamIndex}
        ${whereClause}
        GROUP BY s.id, se.roll_number, student_name, c.class_name, sec.section_name
        HAVING COUNT(im.id) > 0
@@ -321,7 +326,7 @@ router.get('/academic-analytics', async (req, res) => {
             [...params, year]
         );
 
-        // Low attendance students (based on actual attendance records)
+        // Low attendance students
         const lowAttendance = await query(
             `SELECT 
         se.roll_number,
@@ -337,13 +342,13 @@ router.get('/academic-analytics', async (req, res) => {
        LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.is_current = TRUE
        LEFT JOIN classes c ON se.class_id = c.id
        LEFT JOIN sections sec ON se.section_id = sec.id
-       LEFT JOIN attendance a ON s.id = a.student_id AND EXTRACT(YEAR FROM a.attendance_date) = $${paramIndex}
+       LEFT JOIN attendance a ON s.id = a.student_id AND EXTRACT(YEAR FROM a.attendance_date) IN ($${paramIndex}, $${paramIndex + 1})
        ${whereClause}
        GROUP BY s.id, se.roll_number, student_name, c.class_name, sec.section_name
        HAVING COUNT(a.id) > 0 AND (SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END)::DECIMAL / COUNT(a.id)) * 100 < 75
        ORDER BY avg_attendance ASC
        LIMIT 10`,
-            [...params, year]
+            [...params, yearStart, yearEnd]
         );
 
         res.json({
@@ -370,6 +375,7 @@ router.get('/academic-analytics', async (req, res) => {
         });
     }
 });
+
 
 // Export Class Performance Report (Excel)
 router.get('/class-performance/:classId/export', authenticateToken, authorize('admin', 'teacher'), async (req, res) => {

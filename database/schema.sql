@@ -78,9 +78,7 @@ CREATE TRIGGER update_users_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_users_email ON users (email);
-
 CREATE INDEX idx_users_username ON users (username);
-
 CREATE INDEX idx_users_role ON users (role_id);
 
 -- ============================================
@@ -166,7 +164,7 @@ CREATE TRIGGER update_class_subjects_modtime
 CREATE INDEX idx_class_subjects_teacher ON class_subjects (teacher_id);
 
 -- ============================================
--- STUDENT INFORMATION TABLES
+-- STUDENT & PARENT INFORMATION TABLES
 -- ============================================
 
 -- Students Table
@@ -186,9 +184,11 @@ CREATE TABLE students (
     email VARCHAR(255),
     admission_date DATE NOT NULL,
     photo_url VARCHAR(255),
+    assigned_teacher_id INTEGER,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (assigned_teacher_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
 CREATE TRIGGER update_students_modtime
@@ -196,10 +196,50 @@ CREATE TRIGGER update_students_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_students_registration ON students (registration_number);
-
 CREATE INDEX idx_students_name ON students (first_name, last_name);
-
 CREATE INDEX idx_students_active ON students (is_active);
+
+-- Parents Table
+CREATE TABLE parents (
+    id SERIAL PRIMARY KEY,
+    father_name VARCHAR(255),
+    mother_name VARCHAR(255),
+    father_phone VARCHAR(20),
+    mother_phone VARCHAR(20),
+    father_email VARCHAR(255),
+    mother_email VARCHAR(255),
+    father_whatsapp VARCHAR(20),
+    mother_whatsapp VARCHAR(20),
+    father_occupation VARCHAR(100),
+    mother_occupation VARCHAR(100),
+    address TEXT,
+    city VARCHAR(100),
+    state VARCHAR(100),
+    pincode VARCHAR(10),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TRIGGER update_parents_modtime
+    BEFORE UPDATE ON parents
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_parents_father_whatsapp ON parents(father_whatsapp);
+CREATE INDEX idx_parents_mother_whatsapp ON parents(mother_whatsapp);
+
+-- Student-Parents Junction Table
+CREATE TABLE student_parents (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    parent_id INTEGER REFERENCES parents(id) ON DELETE CASCADE,
+    relationship VARCHAR(50),
+    is_primary_contact BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(student_id, parent_id)
+);
+
+CREATE INDEX idx_student_parents_student_id ON student_parents(student_id);
+CREATE INDEX idx_student_parents_parent_id ON student_parents(parent_id);
 
 -- Student Enrollments
 CREATE TABLE student_enrollments (
@@ -224,11 +264,8 @@ CREATE TRIGGER update_student_enrollments_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_enrollments_class_section ON student_enrollments (class_id, section_id);
-
 CREATE INDEX idx_enrollments_academic_year ON student_enrollments (academic_year);
-
 CREATE INDEX idx_enrollments_current ON student_enrollments (is_current);
-
 
 -- ============================================
 -- ATTENDANCE TABLES
@@ -241,6 +278,7 @@ CREATE TABLE attendance (
     class_id INT NOT NULL,
     section_id INT NOT NULL,
     attendance_date DATE NOT NULL,
+    session VARCHAR(20) DEFAULT 'Morning',
     status attendance_status_enum NOT NULL DEFAULT 'Present',
     marked_by INT,
     remarks TEXT,
@@ -250,7 +288,7 @@ CREATE TABLE attendance (
     FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
     FOREIGN KEY (section_id) REFERENCES sections (id) ON DELETE CASCADE,
     FOREIGN KEY (marked_by) REFERENCES users (id) ON DELETE SET NULL,
-    UNIQUE (student_id, attendance_date)
+    UNIQUE (student_id, attendance_date, session)
 );
 
 CREATE TRIGGER update_attendance_modtime
@@ -258,13 +296,7 @@ CREATE TRIGGER update_attendance_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_attendance_date ON attendance (attendance_date);
-
-CREATE INDEX idx_attendance_class_section_date ON attendance (
-    class_id,
-    section_id,
-    attendance_date
-);
-
+CREATE INDEX idx_attendance_class_section_date ON attendance (class_id, section_id, attendance_date);
 CREATE INDEX idx_attendance_student_date ON attendance (student_id, attendance_date);
 
 -- Attendance Summary
@@ -282,11 +314,7 @@ CREATE TABLE attendance_summary (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
-    UNIQUE (
-        student_id,
-        academic_year,
-        month
-    )
+    UNIQUE (student_id, academic_year, month)
 );
 
 CREATE TRIGGER update_attendance_summary_modtime
@@ -315,23 +343,11 @@ CREATE TRIGGER update_exam_types_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default exam types
-INSERT INTO
-    exam_types (
-        exam_name,
-        exam_code,
-        weightage
-    )
-VALUES (
-        'First Internal',
-        'INT1',
-        20.00
-    ),
-    (
-        'Second Internal',
-        'INT2',
-        20.00
-    ),
-    ('Mid Term', 'MID', 30.00),
+INSERT INTO exam_types (exam_name, exam_code, weightage)
+VALUES 
+    ('First Internal', 'INT1', 20.00),
+    ('Mid-Term', 'MID', 30.00),
+    ('Second Internal', 'INT2', 20.00),
     ('Final Exam', 'FINAL', 30.00);
 
 -- Internal Marks Table
@@ -352,12 +368,7 @@ CREATE TABLE internal_marks (
     FOREIGN KEY (class_subject_id) REFERENCES class_subjects (id) ON DELETE CASCADE,
     FOREIGN KEY (exam_type_id) REFERENCES exam_types (id) ON DELETE CASCADE,
     FOREIGN KEY (entered_by) REFERENCES users (id) ON DELETE SET NULL,
-    UNIQUE (
-        student_id,
-        class_subject_id,
-        exam_type_id,
-        academic_year
-    )
+    UNIQUE (student_id, class_subject_id, exam_type_id, academic_year)
 );
 
 CREATE TRIGGER update_internal_marks_modtime
@@ -365,9 +376,7 @@ CREATE TRIGGER update_internal_marks_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_internal_marks_student ON internal_marks (student_id);
-
 CREATE INDEX idx_internal_marks_class_subject ON internal_marks (class_subject_id);
-
 CREATE INDEX idx_internal_marks_academic_year ON internal_marks (academic_year);
 
 -- Grading Rules Table
@@ -386,76 +395,19 @@ CREATE TRIGGER update_grading_rules_modtime
     BEFORE UPDATE ON grading_rules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE INDEX idx_grading_rules_percentage ON grading_rules (
-    min_percentage,
-    max_percentage
-);
+CREATE INDEX idx_grading_rules_percentage ON grading_rules (min_percentage, max_percentage);
 
 -- Insert default grading rules
-INSERT INTO
-    grading_rules (
-        grade_name,
-        min_percentage,
-        max_percentage,
-        grade_point,
-        description
-    )
-VALUES (
-        'A+',
-        90.00,
-        100.00,
-        10.00,
-        'Outstanding'
-    ),
-    (
-        'A',
-        80.00,
-        89.99,
-        9.00,
-        'Excellent'
-    ),
-    (
-        'B+',
-        70.00,
-        79.99,
-        8.00,
-        'Very Good'
-    ),
-    (
-        'B',
-        60.00,
-        69.99,
-        7.00,
-        'Good'
-    ),
-    (
-        'C+',
-        50.00,
-        59.99,
-        6.00,
-        'Above Average'
-    ),
-    (
-        'C',
-        40.00,
-        49.99,
-        5.00,
-        'Average'
-    ),
-    (
-        'D',
-        35.00,
-        39.99,
-        4.00,
-        'Pass'
-    ),
-    (
-        'F',
-        0.00,
-        34.99,
-        0.00,
-        'Fail'
-    );
+INSERT INTO grading_rules (grade_name, min_percentage, max_percentage, grade_point, description)
+VALUES 
+    ('A+', 90.00, 100.00, 10.00, 'Outstanding'),
+    ('A', 80.00, 89.99, 9.00, 'Excellent'),
+    ('B+', 70.00, 79.99, 8.00, 'Very Good'),
+    ('B', 60.00, 69.99, 7.00, 'Good'),
+    ('C+', 50.00, 59.99, 6.00, 'Above Average'),
+    ('C', 40.00, 49.99, 5.00, 'Average'),
+    ('D', 35.00, 39.99, 4.00, 'Pass'),
+    ('F', 0.00, 34.99, 0.00, 'Fail');
 
 -- Student Grades Table (Calculated grades)
 CREATE TABLE student_grades (
@@ -474,11 +426,7 @@ CREATE TABLE student_grades (
     FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
     FOREIGN KEY (class_subject_id) REFERENCES class_subjects (id) ON DELETE CASCADE,
     FOREIGN KEY (grade_id) REFERENCES grading_rules (id) ON DELETE SET NULL,
-    UNIQUE (
-        student_id,
-        class_subject_id,
-        academic_year
-    )
+    UNIQUE (student_id, class_subject_id, academic_year)
 );
 
 CREATE TRIGGER update_student_grades_modtime
@@ -486,8 +434,55 @@ CREATE TRIGGER update_student_grades_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_student_grades_student_year ON student_grades (student_id, academic_year);
-
 CREATE INDEX idx_student_grades_grade ON student_grades (grade_id);
+
+-- ============================================
+-- FEES MANAGEMENT TABLES
+-- ============================================
+
+-- Fees table for student fee status
+CREATE TABLE fees (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    total_fee DECIMAL(10, 2) DEFAULT 0,
+    paid_amount DECIMAL(10, 2) DEFAULT 0,
+    pending_amount DECIMAL(10, 2) DEFAULT 0,
+    academic_year VARCHAR(20),
+    payment_status VARCHAR(20) DEFAULT 'pending',
+    last_payment_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TRIGGER update_fees_modtime
+    BEFORE UPDATE ON fees
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_fees_student_id ON fees(student_id);
+CREATE INDEX idx_fees_academic_year ON fees(academic_year);
+CREATE INDEX idx_fees_payment_status ON fees(payment_status);
+
+-- Class Fee Structure Table
+CREATE TABLE class_fee_structure (
+    id SERIAL PRIMARY KEY,
+    class_id INT NOT NULL,
+    fee_type VARCHAR(100) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    description TEXT,
+    academic_year VARCHAR(20) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
+    UNIQUE (class_id, fee_type, academic_year)
+);
+
+CREATE TRIGGER update_class_fee_structure_modtime
+    BEFORE UPDATE ON class_fee_structure
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX idx_class_fee_structure_class ON class_fee_structure (class_id);
+CREATE INDEX idx_class_fee_structure_academic_year ON class_fee_structure (academic_year);
 
 -- ============================================
 -- NOTIFICATION TABLES
@@ -502,28 +497,13 @@ CREATE TABLE notification_types (
 );
 
 -- Insert default notification types
-INSERT INTO
-    notification_types (type_name, description)
-VALUES (
-        'attendance',
-        'Attendance related notifications'
-    ),
-    (
-        'marks',
-        'Marks and grades notifications'
-    ),
-    (
-        'announcement',
-        'General announcements'
-    ),
-    (
-        'fee',
-        'Fee payment reminders'
-    ),
-    (
-        'event',
-        'School events and activities'
-    );
+INSERT INTO notification_types (type_name, description)
+VALUES 
+    ('attendance', 'Attendance related notifications'),
+    ('marks', 'Marks and grades notifications'),
+    ('announcement', 'General announcements'),
+    ('fee', 'Fee payment reminders'),
+    ('event', 'School events and activities');
 
 -- Notifications Table
 CREATE TABLE notifications (
@@ -549,9 +529,7 @@ CREATE TRIGGER update_notifications_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_notifications_recipient ON notifications (recipient_id, recipient_type);
-
 CREATE INDEX idx_notifications_status ON notifications (status);
-
 CREATE INDEX idx_notifications_created ON notifications (created_at);
 
 -- Notification Preferences
@@ -594,9 +572,7 @@ CREATE TABLE audit_log (
 );
 
 CREATE INDEX idx_audit_log_user ON audit_log (user_id);
-
 CREATE INDEX idx_audit_log_table_record ON audit_log (table_name, record_id);
-
 CREATE INDEX idx_audit_log_created ON audit_log (created_at);
 
 -- System Settings
@@ -616,52 +592,16 @@ CREATE TRIGGER update_system_settings_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default system settings
-INSERT INTO
-    system_settings (
-        setting_key,
-        setting_value,
-        description
-    )
-VALUES (
-        'current_academic_year',
-        '2025-2026',
-        'Current academic year'
-    ),
-    (
-        'school_name',
-        'School Name',
-        'Name of the school'
-    ),
-    (
-        'school_address',
-        '',
-        'School address'
-    ),
-    (
-        'school_phone',
-        '',
-        'School contact number'
-    ),
-    (
-        'school_email',
-        '',
-        'School email address'
-    ),
-    (
-        'attendance_notification_enabled',
-        'true',
-        'Enable attendance notifications'
-    ),
-    (
-        'marks_notification_enabled',
-        'true',
-        'Enable marks notifications'
-    ),
-    (
-        'min_attendance_percentage',
-        '75',
-        'Minimum required attendance percentage'
-    );
+INSERT INTO system_settings (setting_key, setting_value, description)
+VALUES 
+    ('current_academic_year', '2025-2026', 'Current academic year'),
+    ('school_name', 'School Name', 'Name of the school'),
+    ('school_address', '', 'School address'),
+    ('school_phone', '', 'School contact number'),
+    ('school_email', '', 'School email address'),
+    ('attendance_notification_enabled', 'true', 'Enable attendance notifications'),
+    ('marks_notification_enabled', 'true', 'Enable marks notifications'),
+    ('min_attendance_percentage', '75', 'Minimum required attendance percentage');
 
 -- ============================================
 -- VIEWS FOR COMMON QUERIES
@@ -672,11 +612,7 @@ CREATE OR REPLACE VIEW v_current_students AS
 SELECT
     s.id,
     s.registration_number,
-    CONCAT(
-        s.first_name,
-        ' ',
-        s.last_name
-    ) AS full_name,
+    CONCAT(s.first_name, ' ', s.last_name) AS full_name,
     s.date_of_birth,
     s.gender,
     s.phone,
@@ -699,19 +635,12 @@ CREATE OR REPLACE VIEW v_student_attendance_summary AS
 SELECT
     s.id AS student_id,
     s.registration_number,
-    CONCAT(
-        s.first_name,
-        ' ',
-        s.last_name
-    ) AS student_name,
+    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
     asm.academic_year,
     SUM(asm.total_days) AS total_days,
     SUM(asm.present_days) AS present_days,
     SUM(asm.absent_days) AS absent_days,
-    ROUND(
-        AVG(asm.attendance_percentage),
-        2
-    ) AS avg_attendance_percentage
+    ROUND(AVG(asm.attendance_percentage), 2) AS avg_attendance_percentage
 FROM
     students s
     JOIN attendance_summary asm ON s.id = asm.student_id
@@ -725,11 +654,8 @@ GROUP BY
 -- INDEXES FOR PERFORMANCE
 -- ============================================
 
--- Additional composite indexes for common queries
 CREATE INDEX idx_student_enrollment_current ON student_enrollments (student_id, is_current);
-
 CREATE INDEX idx_attendance_student_year ON attendance (student_id, attendance_date);
-
 CREATE INDEX idx_marks_student_year ON internal_marks (student_id, academic_year);
 
 -- ============================================

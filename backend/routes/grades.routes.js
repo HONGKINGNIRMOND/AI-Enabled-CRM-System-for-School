@@ -74,7 +74,7 @@ router.get('/student/:id', authenticateToken, async (req, res) => {
        JOIN class_subjects cs ON sg.class_subject_id = cs.id
        JOIN subjects s ON cs.subject_id = s.id
        LEFT JOIN grading_rules gr ON sg.grade_id = gr.id
-       WHERE sg.student_id = $1 AND sg.academic_year = $2
+       WHERE sg.student_id = $1 AND (sg.academic_year = $2 OR sg.academic_year LIKE $2 || '%')
        ORDER BY s.subject_name`,
             [id, year]
         );

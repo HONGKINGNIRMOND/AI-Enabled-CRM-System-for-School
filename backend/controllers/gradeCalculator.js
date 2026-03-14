@@ -50,16 +50,20 @@ async function calculateStudentGrade(studentId, classSubjectId, academicYear) {
         );
 
         if (marks.length === 0 || marks[0].exam_count === 0 || marks[0].total_max_marks === null) {
+            console.log(`No marks found for student ${studentId}, subject ${classSubjectId}, year ${academicYear}`);
             return null;
         }
 
         const { total_marks_obtained, total_max_marks, absent_count } = marks[0];
 
         // Ensure numeric types for calculation
-        const obtained = parseFloat(total_marks_obtained);
-        const max = parseFloat(total_max_marks);
+        const obtained = parseFloat(total_marks_obtained) || 0;
+        const max = parseFloat(total_max_marks) || 0;
 
-        if (max === 0) return null;
+        if (max === 0) {
+            console.log(`Max marks is 0 for student ${studentId}, subject ${classSubjectId}`);
+            return null;
+        }
 
         // Calculate percentage
         const percentage = (obtained / max) * 100;
@@ -68,7 +72,7 @@ async function calculateStudentGrade(studentId, classSubjectId, academicYear) {
         const grades = await query(
             `SELECT id, grade_name, grade_point
        FROM grading_rules
-       WHERE $1 BETWEEN min_percentage AND max_percentage
+       WHERE $1 >= min_percentage AND $1 <= max_percentage
        LIMIT 1`,
             [percentage]
         );
@@ -80,6 +84,8 @@ async function calculateStudentGrade(studentId, classSubjectId, academicYear) {
         if (grades.length > 0) {
             gradeId = grades[0].id;
             gradePoint = grades[0].grade_point;
+        } else {
+            console.log(`No grade found for percentage ${percentage}`);
         }
 
         // Add remarks if student was absent
@@ -107,6 +113,8 @@ async function calculateStudentGrade(studentId, classSubjectId, academicYear) {
             ]
         );
 
+        console.log(`Grade calculated successfully for student ${studentId}: ${percentage}%`);
+
         return {
             studentId,
             classSubjectId,
@@ -116,6 +124,13 @@ async function calculateStudentGrade(studentId, classSubjectId, academicYear) {
         };
     } catch (error) {
         console.error('Calculate student grade error:', error);
+        console.error('Error details:', {
+            studentId,
+            classSubjectId,
+            academicYear,
+            errorMessage: error.message,
+            errorStack: error.stack
+        });
         throw error;
     }
 }

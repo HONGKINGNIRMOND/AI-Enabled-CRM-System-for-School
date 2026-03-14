@@ -83,7 +83,6 @@ const AttendanceMarking = () => {
                     student_id: record.id,
                     roll_number: record.roll_number,
                     student_name: record.student_name,
-                    roll_number: record.roll_number,
                     status: record.status || 'Present'
                 }));
             setStudents(records);

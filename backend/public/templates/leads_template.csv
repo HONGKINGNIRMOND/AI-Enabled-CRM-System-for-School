@@ -1,4 +1,6 @@
 name,email,phone,company,status,lastContactDate,source
-John Doe,john.doe@example.com,555-1234,Acme Corp,New,2024-01-15,Website
-Jane Smith,jane.smith@example.com,555-5678,Tech Solutions,Contacted,2024-01-14,Referral
-Bob Wilson,bob.wilson@example.com,555-9012,Global Industries,Qualified,2024-01-13,Email
+Kiran Mehta,kiran.mehta@gmail.com,9876501234,Mehta Business Group,New,2025-03-05,Website
+Divya Nair,divya.nair@gmail.com,9765401234,,Contacted,2025-03-04,Referral
+Sanjay Gupta,sanjay.gupta@gmail.com,9654301234,Gupta Enterprises,Qualified,2025-03-03,Walk-in
+Pooja Reddy,pooja.reddy@gmail.com,9543201234,,New,2025-03-02,Social Media
+Amit Kapoor,amit.kapoor@gmail.com,9432101234,Kapoor Industries,Contacted,2025-03-01,Phone Call

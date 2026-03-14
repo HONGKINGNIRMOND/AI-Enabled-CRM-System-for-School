@@ -36,6 +36,8 @@ const leadRoutes = require('./routes/leads');
 const feeRoutes = require('./routes/fees');
 const aiRoutes = require('./routes/ai.routes');
 const quickActionRoutes = require('./routes/quick-action.routes');
+const classFeeStructureRoutes = require('./routes/classFeeStructure.routes');
+const circularRoutes = require('./routes/circulars.routes');
 
 // Register routes
 app.use('/api/auth', authRoutes);
@@ -50,9 +52,12 @@ app.use('/api/leads', leadRoutes);
 app.use('/api/fees', feeRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/quick-action', quickActionRoutes);
+app.use('/api/class-fee-structure', classFeeStructureRoutes);
+app.use('/api/circulars', circularRoutes);
 
-// Static template files
+// Static template and circular files
 app.use('/templates', express.static(path.join(__dirname, 'public', 'templates')));
+app.use('/circulars', express.static(path.join(__dirname, 'public', 'circulars')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

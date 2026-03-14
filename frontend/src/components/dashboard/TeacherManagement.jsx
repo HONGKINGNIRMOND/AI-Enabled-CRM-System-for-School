@@ -38,6 +38,9 @@ const TeacherManagement = () => {
         phone: ''
     });
 
+    // Selection state
+    const [selectedTeachers, setSelectedTeachers] = useState([]);
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -147,6 +150,55 @@ const TeacherManagement = () => {
         setEditingId(teacher.id);
         setIsEditing(true);
         setShowCreateModal(true);
+    };
+    
+    const handleDeleteTeacher = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this teacher? This will also remove all their class assignments.')) return;
+
+        try {
+            setSaving(true);
+            await teachersAPI.delete(id);
+            setSuccess('Teacher deleted successfully');
+            fetchData();
+            setTimeout(() => setSuccess(null), 3000);
+        } catch (err) {
+            console.error('Delete teacher error:', err);
+            setError(err.response?.data?.message || 'Failed to delete teacher.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleBulkDeleteTeachers = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedTeachers.length} teachers? This will also remove all their class assignments.`)) return;
+
+        try {
+            setSaving(true);
+            await teachersAPI.bulkDelete(selectedTeachers);
+            setSuccess(`${selectedTeachers.length} teachers deleted successfully`);
+            setSelectedTeachers([]);
+            fetchData();
+            setTimeout(() => setSuccess(null), 3000);
+        } catch (err) {
+            console.error('Bulk delete teachers error:', err);
+            setError(err.response?.data?.message || 'Failed to delete teachers.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSelectTeacher = (id) => {
+        setSelectedTeachers(prev => 
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAllTeachers = () => {
+        if (selectedTeachers.length === teachers.length) {
+            setSelectedTeachers([]);
+        } else {
+            setSelectedTeachers(teachers.map(t => t.id));
+        }
     };
 
     const handleBulkUpload = async (file) => {
@@ -400,14 +452,34 @@ const TeacherManagement = () => {
                             <Users className="w-6 h-6 text-blue-600" />
                             Registered Teachers
                         </h2>
-                        <span className="px-4 py-1.5 bg-blue-100 text-blue-700 text-sm font-bold rounded-full">
-                            {teachers.length} Active Staff
-                        </span>
+                        <div className="flex items-center gap-4">
+                            {selectedTeachers.length > 0 && (
+                                <button
+                                    onClick={handleBulkDeleteTeachers}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition shadow-md"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete Selected ({selectedTeachers.length})
+                                </button>
+                            )}
+                            <span className="px-4 py-1.5 bg-blue-100 text-blue-700 text-sm font-bold rounded-full">
+                                {teachers.length} Active Staff
+                            </span>
+                        </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50/50">
                                 <tr>
+                                    <th className="py-4 px-6 text-left w-12">
+                                        <input
+                                            type="checkbox"
+                                            checked={teachers.length > 0 && selectedTeachers.length === teachers.length}
+                                            onChange={handleSelectAllTeachers}
+                                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                    </th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Teacher Name</th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Email Address</th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Phone</th>
@@ -425,7 +497,15 @@ const TeacherManagement = () => {
                                     </tr>
                                 ) : (
                                     teachers.map((teacher) => (
-                                        <tr key={teacher.id} className="hover:bg-blue-50/10 transition-colors group">
+                                        <tr key={teacher.id} className={`hover:bg-blue-50/10 transition-colors group ${selectedTeachers.includes(teacher.id) ? 'bg-blue-50/20' : ''}`}>
+                                            <td className="py-4 px-6 text-left">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedTeachers.includes(teacher.id)}
+                                                    onChange={() => handleSelectTeacher(teacher.id)}
+                                                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                            </td>
                                             <td className="py-4 px-6">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md">
@@ -463,13 +543,22 @@ const TeacherManagement = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6 text-right">
-                                                <button
-                                                    onClick={() => handleEdit(teacher)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                                    title="Edit Teacher"
-                                                >
-                                                    <Plus className="w-5 h-5 rotate-45" />
-                                                </button>
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleEdit(teacher)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                        title="Edit Teacher"
+                                                    >
+                                                        <Plus className="w-5 h-5 rotate-45" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteTeacher(teacher.id)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                        title="Delete Teacher"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

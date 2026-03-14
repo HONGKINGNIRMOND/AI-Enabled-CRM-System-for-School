@@ -246,7 +246,7 @@ router.post('/', async (req, res) => {
             const studentId = result[0].id;
 
             if (studentData.class_id && studentData.section_id) {
-                const academicYear = studentData.academic_year || new Date().getFullYear().toString();
+                const academicYear = studentData.academic_year || process.env.CURRENT_ACADEMIC_YEAR || '2026-2027';
 
                 // Generate automatic roll number
                 const rollNumber = await generateRollNumberForAcademicYear(academicYear);
@@ -344,7 +344,7 @@ router.put('/:id', async (req, res) => {
                         );
                     }
                 } else if (updates.class_id && updates.section_id) {
-                    const academicYear = updates.academic_year || new Date().getFullYear().toString();
+                    const academicYear = updates.academic_year || process.env.CURRENT_ACADEMIC_YEAR || '2026-2027';
 
                     // Generate automatic roll number
                     const rollNumber = await generateRollNumberForAcademicYear(academicYear);
@@ -405,7 +405,7 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
         const errors = [];
         let successCount = 0;
         let failCount = 0;
-        const academicYear = req.body.academic_year || new Date().getFullYear().toString();
+        const academicYear = req.body.academic_year || process.env.CURRENT_ACADEMIC_YEAR || '2026-2027';
         const fileExt = path.extname(req.file.originalname).toLowerCase();
 
         // Get next sequence number
@@ -554,9 +554,12 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
         failCount = students.length - validStudents.length;
 
         if (validStudents.length > 0) {
-            await transaction(async (conn) => {
-                for (const student of validStudents) {
-                    try {
+            // Initialize roll number counters per academic year
+            const rollNumberCounters = {};
+
+            for (const student of validStudents) {
+                try {
+                    await transaction(async (conn) => {
                         const studentResult = await conn.query(
                             `INSERT INTO students 
               (registration_number, first_name, last_name, date_of_birth, gender, 
@@ -639,8 +642,52 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
                                     [studentId]
                                 );
 
-                                // Generate automatic roll number
-                                const rollNumber = await generateRollNumberForAcademicYear(student.academic_year);
+                                // Check if student already has an enrollment for this academic year
+                                const existingEnrollment = await conn.query(
+                                    'SELECT roll_number FROM student_enrollments WHERE student_id = $1 AND academic_year = $2',
+                                    [studentId, student.academic_year]
+                                );
+
+                                let rollNumber;
+                                if (existingEnrollment.length > 0) {
+                                    // Use existing roll number
+                                    rollNumber = existingEnrollment[0].roll_number;
+                                } else {
+                                    // Initialize counter for this academic year if not done yet
+                                    if (!rollNumberCounters[student.academic_year]) {
+                                        const year = parseInt(student.academic_year.split('-')[0]);
+                                        const yearPrefix = year.toString().slice(-2);
+
+                                        const result = await conn.query(
+                                            `SELECT roll_number 
+                                             FROM student_enrollments 
+                                             WHERE roll_number LIKE $1 
+                                             ORDER BY roll_number DESC 
+                                             LIMIT 1`,
+                                            [`${yearPrefix}%`]
+                                        );
+
+                                        let nextSequence = 1;
+                                        if (result && result.length > 0) {
+                                            const lastRollNumber = result[0].roll_number;
+                                            const sequencePart = parseInt(lastRollNumber.slice(-3));
+                                            if (!isNaN(sequencePart)) {
+                                                nextSequence = sequencePart + 1;
+                                            }
+                                        }
+
+                                        rollNumberCounters[student.academic_year] = {
+                                            yearPrefix,
+                                            nextSequence
+                                        };
+                                    }
+
+                                    // Generate roll number from counter
+                                    const counter = rollNumberCounters[student.academic_year];
+                                    const sequenceString = counter.nextSequence.toString().padStart(3, '0');
+                                    rollNumber = `${counter.yearPrefix}${sequenceString}`;
+                                    counter.nextSequence++;
+                                }
 
                                 await conn.query(
                                     `INSERT INTO student_enrollments 
@@ -650,23 +697,23 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
                                      DO UPDATE SET 
                                        class_id = EXCLUDED.class_id,
                                        section_id = EXCLUDED.section_id,
-                                       is_current = TRUE,
-                                       roll_number = EXCLUDED.roll_number`,
+                                       is_current = TRUE`,
                                     [studentId, classId, sectionId, student.academic_year, student.admission_date, rollNumber]
                                 );
                             }
                         }
 
-                        successCount++;
-                    } catch (error) {
-                        failCount++;
-                        errors.push({
-                            registration_number: student.registration_number,
-                            error: error.message
-                        });
-                    }
+                    });
+
+                    successCount++;
+                } catch (error) {
+                    failCount++;
+                    errors.push({
+                        registration_number: student.registration_number,
+                        error: error.message
+                    });
                 }
-            });
+            }
         }
 
         // Clean up uploaded file
@@ -690,6 +737,26 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
             success: false,
             message: 'Bulk upload failed: ' + error.message
         });
+    }
+});
+
+// Bulk delete students
+router.post('/bulk-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, message: 'Invalid IDs' });
+        }
+
+        await query('DELETE FROM students WHERE id = ANY($1)', [ids]);
+
+        res.json({
+            success: true,
+            message: `Successfully deleted ${ids.length} students`
+        });
+    } catch (error) {
+        console.error('Bulk delete students error:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete students' });
     }
 });
 

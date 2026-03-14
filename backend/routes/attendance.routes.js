@@ -338,9 +338,9 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
         let failCount = 0;
         const marked_by = 1;
 
-        await transaction(async (conn) => {
-            for (const record of attendanceData) {
-                try {
+        for (const record of attendanceData) {
+            try {
+                await transaction(async (conn) => {
                     // Find student by roll number
                     const studentRes = await conn.query(
                         `SELECT s.id, se.class_id, se.section_id 
@@ -365,16 +365,16 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
                         [student.id, student.class_id, student.section_id, record.date, record.status, marked_by, record.session, record.remarks]
                     );
 
-                    successCount++;
-                } catch (error) {
-                    failCount++;
-                    errors.push({
-                        roll_number: record.roll_number,
-                        error: error.message
-                    });
-                }
+                });
+                successCount++;
+            } catch (error) {
+                failCount++;
+                errors.push({
+                    roll_number: record.roll_number,
+                    error: error.message
+                });
             }
-        });
+        }
 
         // Clean up uploaded file
         if (req.file && fs.existsSync(req.file.path)) {

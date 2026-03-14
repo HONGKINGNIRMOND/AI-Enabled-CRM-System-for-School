@@ -112,7 +112,7 @@ const MarksEntry = () => {
     const [sectionId, setSectionId] = useState('');
     const [subjectId, setSubjectId] = useState('');
     const [examId, setExamId] = useState('');
-    const [academicYear, setAcademicYear] = useState('2025-2026');
+    const [academicYear, setAcademicYear] = useState('2026-2027');
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
     const [subjects, setSubjects] = useState([]);
@@ -192,7 +192,6 @@ const MarksEntry = () => {
                 student_id: record.student_id,
                 roll_number: record.roll_number,
                 student_name: record.student_name,
-                roll_number: record.roll_number,
                 marks_obtained: record.marks_obtained !== null && record.marks_obtained !== undefined ? record.marks_obtained : '',
                 max_marks: record.max_marks || 100,
                 is_absent: record.is_absent || false,
@@ -408,8 +407,8 @@ const MarksEntry = () => {
                                 onChange={(e) => setAcademicYear(e.target.value)}
                                 className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all shadow-sm bg-white"
                             >
+                                <option value="2026-2027">2026-2027</option>
                                 <option value="2025-2026">2025-2026</option>
-                                <option value="2024-2025">2024-2025</option>
                             </select>
                         </div>
                     </div>

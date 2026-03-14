@@ -12,8 +12,10 @@ import MarksEntry from './components/Marks/MarksEntry';
 import TeacherManagement from './components/dashboard/TeacherManagement';
 import Reports from './components/Reports/Reports';
 import FeeManagement from './components/Fees/FeeManagement';
+import ClassFeeStructure from './components/Fees/ClassFeeStructure';
 import AIPredictions from './components/AI/AIPredictions';
 import QuickActionPanel from './components/quick-action/QuickActionPanel';
+import Circulars from './components/Circulars/Circulars';
 import './App.css';
 
 // Protected Route Component
@@ -144,6 +146,15 @@ function App() {
           />
 
           <Route
+            path="/class-fee-structure"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ClassFeeStructure />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/ai-predictions"
             element={
               <ProtectedRoute allowedRoles={['admin', 'teacher']}>
@@ -155,8 +166,17 @@ function App() {
           <Route
             path="/quick-action"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                 <QuickActionPanel />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/circulars"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+                <Circulars />
               </ProtectedRoute>
             }
           />

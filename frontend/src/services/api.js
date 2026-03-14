@@ -55,6 +55,7 @@ export const studentsAPI = {
     create: (data) => api.post('/students', data),
     update: (id, data) => api.put(`/students/${id}`, data),
     delete: (id) => api.delete(`/students/${id}`),
+    bulkDelete: (ids) => api.post('/students/bulk-delete', { ids }),
     bulkUpload: (file) => {
         const formData = new FormData();
         formData.append('file', file);
@@ -121,7 +122,8 @@ export const masterAPI = {
     getClasses: () => api.get('/master/classes'),
     getSections: (classId) => api.get('/master/sections', { params: classId ? { class_id: classId } : {} }),
     getSubjects: (classId) => api.get('/master/subjects', { params: classId ? { class_id: classId } : {} }),
-    getExamTypes: () => api.get('/master/exam-types')
+    getExamTypes: () => api.get('/master/exam-types'),
+    getAcademicYears: () => api.get('/master/academic-years')
 };
 
 // Teachers API
@@ -141,7 +143,9 @@ export const teachersAPI = {
     removeAssignment: (id) => api.delete(`/teachers/assign/${id}`),
     getClassTeachers: () => api.get('/teachers/class-teachers'),
     assignClassTeacher: (data) => api.post('/teachers/assign-class-teacher', data),
-    removeClassTeacher: (sectionId) => api.delete(`/teachers/assign-class-teacher/${sectionId}`)
+    removeClassTeacher: (sectionId) => api.delete(`/teachers/assign-class-teacher/${sectionId}`),
+    delete: (id) => api.delete(`/teachers/${id}`),
+    bulkDelete: (ids) => api.post('/teachers/bulk-delete', { ids })
 };
 
 
@@ -172,6 +176,26 @@ export const feesAPI = {
     getStatistics: (params) => api.get('/fees/statistics', { params }),
     getClassWiseStatistics: (params) => api.get('/fees/class-wise-statistics', { params }),
     sendReminder: (id) => api.post(`/fees/${id}/remind`)
+};
+
+// Circulars API (e-circulars from admin to teachers)
+export const circularsAPI = {
+    list: () => api.get('/circulars'),
+    create: ({ title, message, audience = 'teachers', files }) => {
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('message', message);
+        formData.append('audience', audience);
+        if (files && files.length) {
+            Array.from(files).forEach((file) => {
+                formData.append('files', file);
+            });
+        }
+        return api.post('/circulars', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+    },
+    delete: (id) => api.delete(`/circulars/${id}`)
 };
 
 // AI API

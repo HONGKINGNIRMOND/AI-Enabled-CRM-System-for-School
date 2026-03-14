@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { studentsAPI } from '../../services/api';
-import { Search, Plus, Upload, ArrowLeft, Trash2, Ban, CheckCircle } from 'lucide-react';
+import { Search, Plus, Upload, ArrowLeft, Trash2, Ban, CheckCircle, ArrowUpDown } from 'lucide-react';
 import BulkUploadModal from '../common/BulkUploadModal';
 import StudentFormModal from './StudentFormModal';
 
@@ -10,19 +10,60 @@ const StudentList = () => {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [sortBy, setSortBy] = useState('roll_number');
+    const [sortOrder, setSortOrder] = useState('asc');
     const [showStudentModal, setShowStudentModal] = useState(false);
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [selectedIds, setSelectedIds] = useState([]);
 
     useEffect(() => {
         fetchStudents();
-    }, [search]);
+    }, [search, sortBy, sortOrder]);
 
     const fetchStudents = async () => {
         try {
             setLoading(true);
             const response = await studentsAPI.getAll({ search, page: 1, limit: 20 });
-            setStudents(response.data.data.students);
+            let studentsList = response.data.data.students;
+
+            // Client-side sorting
+            studentsList = studentsList.sort((a, b) => {
+                let aVal, bVal;
+
+                switch (sortBy) {
+                    case 'roll_number':
+                        aVal = a.roll_number || '';
+                        bVal = b.roll_number || '';
+                        break;
+                    case 'name':
+                        aVal = `${a.first_name} ${a.last_name}`.toLowerCase();
+                        bVal = `${b.first_name} ${b.last_name}`.toLowerCase();
+                        break;
+                    case 'class': {
+                        aVal = a.class_name || '';
+                        bVal = b.class_name || '';
+                        // Extract numeric part for proper sorting
+                        const aNum = parseInt(aVal.match(/\d+/)?.[0] || '999');
+                        const bNum = parseInt(bVal.match(/\d+/)?.[0] || '999');
+                        return sortOrder === 'asc' ? aNum - bNum : bNum - aNum;
+                    }
+                    case 'section':
+                        aVal = a.section_name || '';
+                        bVal = b.section_name || '';
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (sortOrder === 'asc') {
+                    return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+                } else {
+                    return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+                }
+            });
+
+            setStudents(studentsList);
         } catch (error) {
             console.error('Failed to fetch students:', error);
         } finally {
@@ -58,6 +99,36 @@ const StudentList = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} students?`)) return;
+
+        try {
+            setLoading(true);
+            await studentsAPI.bulkDelete(selectedIds);
+            setSelectedIds([]);
+            fetchStudents();
+        } catch (error) {
+            console.error('Failed to bulk delete students:', error);
+            alert('Failed to delete students');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toggleSelectStudent = (id) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === students.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(students.map(s => s.id));
+        }
+    };
+
     const handleToggleStatus = async (student) => {
         try {
             await studentsAPI.update(student.id, { is_active: !student.is_active });
@@ -86,6 +157,15 @@ const StudentList = () => {
                             <h1 className="text-2xl font-bold text-gray-900">Students</h1>
                         </div>
                         <div className="flex gap-2">
+                            {selectedIds.length > 0 && (
+                                <button
+                                    onClick={handleBulkDelete}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete Selected ({selectedIds.length})
+                                </button>
+                            )}
                             <button
                                 onClick={() => setShowBulkModal(true)}
                                 className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
@@ -110,8 +190,8 @@ const StudentList = () => {
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="bg-white rounded-xl shadow-lg p-6">
-                    <div className="mb-6">
-                        <div className="relative">
+                    <div className="mb-6 flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
                                 type="text"
@@ -120,6 +200,26 @@ const StudentList = () => {
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             />
+                        </div>
+                        <div className="flex gap-2">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                            >
+                                <option value="roll_number">Sort by Roll No</option>
+                                <option value="name">Sort by Name</option>
+                                <option value="class">Sort by Class</option>
+                                <option value="section">Sort by Section</option>
+                            </select>
+                            <button
+                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+                                title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                            >
+                                <ArrowUpDown className="w-4 h-4" />
+                                {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
+                            </button>
                         </div>
                     </div>
 
@@ -136,6 +236,14 @@ const StudentList = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b">
+                                        <th className="py-3 px-4 text-left w-10">
+                                            <input
+                                                type="checkbox"
+                                                checked={students.length > 0 && selectedIds.length === students.length}
+                                                onChange={toggleSelectAll}
+                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                        </th>
                                         <th className="text-left py-3 px-4 text-gray-700">Roll No</th>
                                         <th className="text-left py-3 px-4 text-gray-700">Name</th>
                                         <th className="text-left py-3 px-4 text-gray-700">Class</th>
@@ -148,7 +256,15 @@ const StudentList = () => {
                                 </thead>
                                 <tbody>
                                     {students.map((student) => (
-                                        <tr key={student.id} className="border-b hover:bg-gray-50">
+                                        <tr key={student.id} className={`border-b hover:bg-gray-50 ${selectedIds.includes(student.id) ? 'bg-blue-50/50' : ''}`}>
+                                            <td className="py-3 px-4 text-left">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(student.id)}
+                                                    onChange={() => toggleSelectStudent(student.id)}
+                                                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                            </td>
                                             <td className="py-3 px-4">{student.roll_number || '-'}</td>
                                             <td className="py-3 px-4 font-medium">
                                                 {student.first_name} {student.last_name}

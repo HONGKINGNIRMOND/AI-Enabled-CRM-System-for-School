@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import DateTimeDisplay from '../common/DateTimeDisplay';
 import { Calendar, BookOpen, Users, LogOut } from 'lucide-react';
 
 const TeacherDashboard = () => {
@@ -10,18 +11,21 @@ const TeacherDashboard = () => {
         <div className="min-h-screen bg-gray-50">
             <header className="bg-white shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">Teacher Dashboard</h1>
                             <p className="text-gray-600 mt-1">Welcome back, {user?.fullName}</p>
                         </div>
-                        <button
-                            onClick={logout}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        >
-                            <LogOut className="w-4 h-4" />
-                            Logout
-                        </button>
+                        <div className="flex items-center gap-4">
+                            <DateTimeDisplay />
+                            <button
+                                onClick={logout}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Logout
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -53,6 +57,23 @@ const TeacherDashboard = () => {
                         <BookOpen className="w-12 h-12 text-purple-600 mb-4" />
                         <h3 className="text-xl font-bold text-gray-800">Enter Marks</h3>
                         <p className="text-gray-600 mt-2">Record student exam marks</p>
+                    </Link>
+                    <Link
+                        to="/circulars"
+                        className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
+                    >
+                        <Calendar className="w-12 h-12 text-indigo-600 mb-4" />
+                        <h3 className="text-xl font-bold text-gray-800">E-Circulars</h3>
+                        <p className="text-gray-600 mt-2">View circulars and attachments from admin</p>
+                    </Link>
+
+                    <Link
+                        to="/quick-action"
+                        className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
+                    >
+                        <Users className="w-12 h-12 text-orange-600 mb-4" />
+                        <h3 className="text-xl font-bold text-gray-800">Quick Action CRM</h3>
+                        <p className="text-gray-600 mt-2">Search students and send updates</p>
                     </Link>
                 </div>
 

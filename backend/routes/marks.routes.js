@@ -8,27 +8,108 @@ const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
-const { sendMarksNotification } = require('../services/notificationService');
+// const { sendMarksNotification } = require('../services/notificationService');
+const { calculateStudentGrade } = require('../controllers/gradeCalculator');
 
 const upload = multer({
     dest: 'uploads/',
     limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760 }
 });
 
+// Get all marks (general endpoint)
+router.get('/', authenticateToken, async (req, res) => {
+    try {
+        const { academic_year, class_id, section_id } = req.query;
+
+        let sql = `
+            SELECT 
+                im.*,
+                s.subject_name,
+                et.exam_name,
+                CONCAT(st.first_name, ' ', st.last_name) as student_name,
+                se.roll_number,
+                c.class_name,
+                sec.section_name
+            FROM internal_marks im
+            JOIN class_subjects cs ON im.class_subject_id = cs.id
+            JOIN subjects s ON cs.subject_id = s.id
+            JOIN exam_types et ON im.exam_type_id = et.id
+            JOIN students st ON im.student_id = st.id
+            LEFT JOIN student_enrollments se ON st.id = se.student_id AND se.is_current = TRUE
+            LEFT JOIN classes c ON se.class_id = c.id
+            LEFT JOIN sections sec ON se.section_id = sec.id
+            WHERE 1=1
+        `;
+        const params = [];
+        let paramIndex = 1;
+
+        if (academic_year) {
+            sql += ` AND (im.academic_year = $${paramIndex} OR im.academic_year LIKE $${paramIndex} || '%')`;
+            params.push(academic_year);
+            paramIndex++;
+        }
+
+        if (class_id) {
+            sql += ` AND se.class_id = $${paramIndex++}`;
+            params.push(class_id);
+        }
+
+        if (section_id) {
+            sql += ` AND se.section_id = $${paramIndex++}`;
+            params.push(section_id);
+        }
+
+        sql += ' ORDER BY c.class_name, sec.section_name, se.roll_number, s.subject_name LIMIT 100';
+
+        const marks = await query(sql, params);
+
+        res.json({
+            success: true,
+            data: { marks }
+        });
+    } catch (error) {
+        console.error('Get marks error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch marks',
+            error: error.message
+        });
+    }
+});
+
 // Enter marks for a student
 router.post('/', authenticateToken, authorize('admin', 'teacher'), validate(schemas.marks), async (req, res) => {
     try {
-        const { student_id, class_subject_id, exam_type_id, academic_year, marks_obtained, max_marks, is_absent, remarks } = req.validatedData;
+        console.log('Received marks entry request:', req.body);
+        const { student_id, class_subject_id, exam_type_id, academic_year, marks_obtained, is_absent, remarks } = req.validatedData;
         const entered_by = req.user.id;
 
+        // Get max_marks from request or use validatedData
+        const max_marks = req.validatedData.max_marks;
+
+        console.log('Inserting marks into database...');
         await query(
             `INSERT INTO internal_marks 
       (student_id, class_subject_id, exam_type_id, academic_year, marks_obtained, max_marks, is_absent, entered_by, remarks)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (student_id, class_subject_id, exam_type_id, academic_year)
-      DO UPDATE SET marks_obtained = EXCLUDED.marks_obtained, is_absent = EXCLUDED.is_absent, entered_by = EXCLUDED.entered_by, remarks = EXCLUDED.remarks`,
-            [student_id, class_subject_id, exam_type_id, academic_year, marks_obtained, max_marks, is_absent, entered_by, remarks]
+      DO UPDATE SET marks_obtained = EXCLUDED.marks_obtained, max_marks = EXCLUDED.max_marks, is_absent = EXCLUDED.is_absent, entered_by = EXCLUDED.entered_by, remarks = EXCLUDED.remarks`,
+            [student_id, class_subject_id, exam_type_id, academic_year, marks_obtained || 0, max_marks, is_absent || false, entered_by, remarks || null]
         );
+        console.log('Marks inserted successfully');
+
+        // Automatically calculate grade for this student and subject
+        if (!is_absent) {
+            try {
+                console.log(`Calculating grade for student ${student_id}, subject ${class_subject_id}, year ${academic_year}`);
+                await calculateStudentGrade(student_id, class_subject_id, academic_year);
+                console.log('Grade calculated successfully');
+            } catch (gradeError) {
+                console.error('Failed to auto-calculate grade:', gradeError);
+                console.error('Grade error stack:', gradeError.stack);
+                // Don't fail the marks entry if grade calculation fails
+            }
+        }
 
         // Fetch subject name for notification
         const subjectResult = await query(
@@ -41,20 +122,25 @@ router.post('/', authenticateToken, authorize('admin', 'teacher'), validate(sche
 
         if (subjectResult.length > 0) {
             const subjectName = subjectResult[0].subject_name;
-            // Send notification asynchronously
-            sendMarksNotification(student_id, subjectName, marks_obtained, max_marks)
-                .catch(err => console.error('Failed to send marks notification:', err));
+            // Send notification asynchronously (disabled for now)
+            // sendMarksNotification(student_id, subjectName, marks_obtained, max_marks)
+            //     .catch(err => console.error('Failed to send marks notification:', err));
         }
 
         res.json({
             success: true,
-            message: 'Marks entered successfully'
+            message: 'Marks entered successfully' + (is_absent ? '' : ' and grade calculated')
         });
     } catch (error) {
         console.error('Enter marks error:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Request body:', req.body);
+        console.error('Validated data:', req.validatedData);
         res.status(500).json({
             success: false,
-            message: 'Failed to enter marks'
+            message: 'Failed to enter marks',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -82,8 +168,9 @@ router.get('/student/:id', authenticateToken, async (req, res) => {
         let paramIndex = 2;
 
         if (academic_year) {
-            sql += ` AND im.academic_year = $${paramIndex++}`;
+            sql += ` AND (im.academic_year = $${paramIndex} OR im.academic_year LIKE $${paramIndex} || '%')`;
             params.push(academic_year);
+            paramIndex++;
         }
 
         sql += ' ORDER BY s.subject_name, et.exam_name';
@@ -298,9 +385,9 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
 
         const classSubject = classSubjects[0];
 
-        await transaction(async (conn) => {
-            for (const mark of marksData) {
-                try {
+        for (const mark of marksData) {
+            try {
+                await transaction(async (conn) => {
                     let studentId = mark.student_id;
 
                     // Resolve Student ID if Roll Number is provided or student_id looks like Roll No
@@ -326,16 +413,25 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
                         [studentId, class_subject_id, exam_type_id, academic_year, mark.marks_obtained,
                             classSubject.max_marks, mark.is_absent === 'true' || mark.is_absent === true || mark.is_absent === 'Yes', entered_by]
                     );
-                    successCount++;
-                } catch (error) {
-                    failCount++;
-                    errors.push({
-                        roll_number: mark.roll_number || mark.student_id,
-                        error: error.message
-                    });
-                }
+
+                    // Automatically calculate grade for this student
+                    try {
+                        await calculateStudentGrade(studentId, class_subject_id, academic_year);
+                    } catch (gradeError) {
+                        console.error(`Failed to calculate grade for student ${studentId}:`, gradeError);
+                        // Don't fail the marks entry if grade calculation fails
+                    }
+
+                });
+                successCount++;
+            } catch (error) {
+                failCount++;
+                errors.push({
+                    roll_number: mark.roll_number || mark.student_id,
+                    error: error.message
+                });
             }
-        });
+        }
 
         // Clean up uploaded file
         if (req.file && fs.existsSync(req.file.path)) {
@@ -344,7 +440,7 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
 
         res.json({
             success: true,
-            message: `Bulk upload completed: ${successCount} succeeded, ${failCount} failed`,
+            message: `Bulk upload completed: ${successCount} succeeded, ${failCount} failed. Grades calculated automatically.`,
             data: {
                 successCount,
                 failCount,

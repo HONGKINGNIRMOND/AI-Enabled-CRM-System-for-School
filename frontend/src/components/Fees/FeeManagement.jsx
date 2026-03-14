@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { feesAPI, masterAPI } from '../../services/api';
-import { Search, DollarSign, Send, AlertCircle, LogIn, ArrowLeft } from 'lucide-react';
+import api from '../../services/api';
+import { Search, DollarSign, Send, AlertCircle, LogIn, ArrowLeft, Info } from 'lucide-react';
 
 const FeeManagement = () => {
     const navigate = useNavigate();
@@ -11,12 +12,14 @@ const FeeManagement = () => {
     const [selectedClass, setSelectedClass] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState(null);
+    const [classFeeStructure, setClassFeeStructure] = useState(null);
 
     // Payment Modal State
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [paymentAmount, setPaymentAmount] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [isInitializing, setIsInitializing] = useState(false);
 
     useEffect(() => {
         fetchClasses();
@@ -25,9 +28,20 @@ const FeeManagement = () => {
     useEffect(() => {
         if (selectedClass) {
             fetchFees();
+            fetchClassFeeStructure();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedClass]);
+
+    const fetchClassFeeStructure = async () => {
+        try {
+            const response = await api.get(`/class-fee-structure/class/${selectedClass}`);
+            setClassFeeStructure(response.data.data);
+        } catch (error) {
+            console.error('Error fetching class fee structure:', error);
+            setClassFeeStructure(null);
+        }
+    };
 
     const fetchClasses = async () => {
         try {
@@ -93,12 +107,11 @@ const FeeManagement = () => {
 
                 console.log('Payment update response:', response.data);
             } else {
-                // Create new fee record
-                const totalFeeInput = document.getElementById('totalFeeInput');
-                const totalFee = totalFeeInput ? parseFloat(totalFeeInput.value) : 0;
+                // Create new fee record - use class fee structure total
+                const totalFee = classFeeStructure?.totalFee || 0;
 
                 if (!totalFee || totalFee <= 0) {
-                    alert('Please enter a valid total fee amount');
+                    alert('No fee structure defined for this class. Please set up class fee structure first.');
                     return;
                 }
 
@@ -112,7 +125,7 @@ const FeeManagement = () => {
                     studentId: selectedStudent.id,
                     totalFee: totalFee,
                     paidAmount: parseFloat(paymentAmount),
-                    academicYear: new Date().getFullYear().toString() + '-' + (new Date().getFullYear() + 1).toString()
+                    academicYear: '2026-2027'
                 });
 
                 console.log('Fee creation response:', response.data);
@@ -153,6 +166,38 @@ const FeeManagement = () => {
         (student.roll_number && student.roll_number.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
+    const handleInitializeClassFees = async () => {
+        if (!selectedClass) {
+            alert('Please select a class first');
+            return;
+        }
+
+        if (!classFeeStructure || classFeeStructure.totalFee === 0) {
+            alert('No fee structure defined for this class. Please set up the fee structure first.');
+            return;
+        }
+
+        if (!window.confirm(`This will initialize/update fees for all students in this class based on the fee structure (₹${classFeeStructure.totalFee}). Continue?`)) {
+            return;
+        }
+
+        setIsInitializing(true);
+        try {
+            const response = await api.post('/fees/initialize-class-fees', {
+                classId: selectedClass,
+                academicYear: '2026-2027'
+            });
+
+            alert(response.data.message);
+            await fetchFees();
+        } catch (error) {
+            console.error('Error initializing fees:', error);
+            alert('Failed to initialize fees: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setIsInitializing(false);
+        }
+    };
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <button
@@ -169,7 +214,49 @@ const FeeManagement = () => {
                     <h1 className="text-2xl font-bold text-gray-900">Fee Management</h1>
                     <p className="text-gray-500">Track and manage student fees</p>
                 </div>
+                <Link
+                    to="/class-fee-structure"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                >
+                    <DollarSign className="w-4 h-4" />
+                    Manage Fee Structure
+                </Link>
             </div>
+
+            {/* Fee Structure Summary */}
+            {classFeeStructure && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 mb-6">
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                <Info className="w-5 h-5 text-blue-600" />
+                                Fee Structure for Selected Class
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {classFeeStructure.feeStructures.map((fee) => (
+                                    <div key={fee.id} className="bg-white p-3 rounded-lg shadow-sm">
+                                        <p className="text-xs text-gray-500">{fee.fee_type}</p>
+                                        <p className="text-lg font-bold text-gray-900">₹{parseFloat(fee.amount).toFixed(0)}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-3 ml-4">
+                            <div className="bg-white p-4 rounded-lg shadow-sm">
+                                <p className="text-xs text-gray-500 mb-1">Total Fee</p>
+                                <p className="text-2xl font-bold text-blue-600">₹{classFeeStructure.totalFee.toFixed(0)}</p>
+                            </div>
+                            <button
+                                onClick={handleInitializeClassFees}
+                                disabled={isInitializing || classFeeStructure.totalFee === 0}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm font-medium"
+                            >
+                                {isInitializing ? 'Initializing...' : 'Initialize Class Fees'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Filters */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4">
@@ -316,12 +403,42 @@ const FeeManagement = () => {
             {/* Payment Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
                         <h2 className="text-xl font-bold text-gray-900 mb-4">Record Fee Payment</h2>
-                        <div className="mb-4">
-                            <p className="text-gray-600">Student: <span className="font-semibold">{selectedStudent?.first_name} {selectedStudent?.last_name}</span></p>
-                            <p className="text-gray-600">Pending Amount: <span className="font-semibold text-red-600">₹{selectedStudent?.pending_amount}</span></p>
+
+                        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                            <p className="text-gray-600 mb-1">Student: <span className="font-semibold">{selectedStudent?.first_name} {selectedStudent?.last_name}</span></p>
+                            <p className="text-gray-600 mb-1">Class: <span className="font-semibold">{selectedStudent?.class_name} - {selectedStudent?.section_name}</span></p>
+                            {selectedStudent?.fee_id ? (
+                                <>
+                                    <p className="text-gray-600 mb-1">Total Fee: <span className="font-semibold">₹{selectedStudent?.total_fee}</span></p>
+                                    <p className="text-gray-600 mb-1">Paid: <span className="font-semibold text-green-600">₹{selectedStudent?.paid_amount}</span></p>
+                                    <p className="text-gray-600">Pending: <span className="font-semibold text-red-600">₹{selectedStudent?.pending_amount}</span></p>
+                                </>
+                            ) : (
+                                classFeeStructure && (
+                                    <div className="mt-3">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Info className="w-4 h-4 text-blue-600" />
+                                            <p className="text-sm font-semibold text-gray-700">Fee Structure for this Class:</p>
+                                        </div>
+                                        <div className="space-y-1 text-sm">
+                                            {classFeeStructure.feeStructures.map((fee) => (
+                                                <div key={fee.id} className="flex justify-between text-gray-600">
+                                                    <span>{fee.fee_type}:</span>
+                                                    <span className="font-medium">₹{parseFloat(fee.amount).toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                            <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-200">
+                                                <span>Total Fee:</span>
+                                                <span>₹{classFeeStructure.totalFee.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            )}
                         </div>
+
                         <form onSubmit={handleUpdatePayment}>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Payment Amount</label>
@@ -329,30 +446,28 @@ const FeeManagement = () => {
                                     type="number"
                                     required
                                     min="1"
-                                    max={selectedStudent?.pending_amount}
+                                    max={selectedStudent?.pending_amount || classFeeStructure?.totalFee}
                                     value={paymentAmount}
                                     onChange={(e) => setPaymentAmount(e.target.value)}
+                                    placeholder="Enter amount"
                                     className="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                 />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {selectedStudent?.fee_id
+                                        ? `Maximum: ₹${selectedStudent?.pending_amount}`
+                                        : classFeeStructure
+                                            ? `Total fee: ₹${classFeeStructure.totalFee.toFixed(2)}`
+                                            : 'No fee structure defined'}
+                                </p>
                             </div>
 
-                            {!selectedStudent?.fee_id && (
-                                <div className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Total Fee Amount</label>
-                                    <input
-                                        id="totalFeeInput"
-                                        type="number"
-                                        required
-                                        min={paymentAmount}
-                                        placeholder="Enter total annual fee"
-                                        className="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            )}
                             <div className="flex justify-end gap-3">
                                 <button
                                     type="button"
-                                    onClick={() => setIsModalOpen(false)}
+                                    onClick={() => {
+                                        setIsModalOpen(false);
+                                        setPaymentAmount('');
+                                    }}
                                     disabled={isUpdating}
                                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -360,7 +475,7 @@ const FeeManagement = () => {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isUpdating}
+                                    disabled={isUpdating || (!selectedStudent?.fee_id && !classFeeStructure)}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isUpdating ? 'Processing...' : 'Record Payment'}

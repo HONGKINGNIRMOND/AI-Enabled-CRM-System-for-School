@@ -29,10 +29,12 @@ const StudentDetails = () => {
 
     const fetchAcademicData = async () => {
         try {
+            // Use the student's academic year from their enrollment
+            const academicYear = student.academic_year || '2026-2027';
             const [subjectsRes, marksRes, gradesRes] = await Promise.all([
                 masterAPI.getSubjects(student.class_id),
-                marksAPI.getByStudent(id),
-                gradesAPI.getByStudent(id)
+                marksAPI.getByStudent(id, { academic_year: academicYear }),
+                gradesAPI.getByStudent(id, { academic_year: academicYear })
             ]);
             setAcademicData({
                 subjects: subjectsRes.data.data,
@@ -492,7 +494,7 @@ const StudentDetails = () => {
                                             </thead>
                                             <tbody className="divide-y divide-gray-100">
                                                 {academicData.subjects.map((subject) => {
-                                                    const subjectMarks = academicData.marks.filter(m => m.subject_id === subject.id || m.class_subject_id === subject.class_subject_id);
+                                                    const subjectMarks = academicData.marks.filter(m => m.class_subject_id === (subject.class_subject_id || subject.id));
 
                                                     if (subjectMarks.length === 0) {
                                                         return (
@@ -554,7 +556,7 @@ const StudentDetails = () => {
                                                             </td>
                                                             <td className="py-4 px-4 text-center">
                                                                 {(() => {
-                                                                    const gradeInfo = academicData.grades.find(g => g.class_subject_id === subject.id || g.class_subject_id === subject.class_subject_id);
+                                                                    const gradeInfo = academicData.grades.find(g => g.class_subject_id === (subject.class_subject_id || subject.id));
                                                                     return gradeInfo ? (
                                                                         <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold">
                                                                             {gradeInfo.grade_name}

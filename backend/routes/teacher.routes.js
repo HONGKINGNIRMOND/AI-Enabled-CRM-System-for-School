@@ -224,11 +224,10 @@ router.post('/bulk', authenticateToken, authorize('admin'), upload.single('file'
             validTeachers.push(teacher);
         }
 
-        // Process valid teachers with transaction
         if (validTeachers.length > 0) {
-            await transaction(async (conn) => {
-                for (const teacher of validTeachers) {
-                    try {
+            for (const teacher of validTeachers) {
+                try {
+                    await transaction(async (conn) => {
                         const { username, email, password, full_name, phone } = teacher;
 
                         // Check if email or username exists
@@ -243,7 +242,7 @@ router.post('/bulk', authenticateToken, authorize('admin'), upload.single('file'
                                 username,
                                 error: 'Email or Username already exists'
                             });
-                            continue;
+                            return;
                         }
 
                         // Hash password
@@ -257,17 +256,18 @@ router.post('/bulk', authenticateToken, authorize('admin'), upload.single('file'
                             [username, email, password_hash, full_name, phone, role_id]
                         );
 
-                        successCount++;
-                    } catch (err) {
-                        console.error(`Bulk create error for ${teacher.username}:`, err);
-                        failCount++;
-                        errors.push({
-                            username: teacher.username,
-                            error: err.message || 'Unexpected error during creation'
-                        });
-                    }
+                    });
+
+                    successCount++;
+                } catch (err) {
+                    console.error(`Bulk create error for ${teacher.username}:`, err);
+                    failCount++;
+                    errors.push({
+                        username: teacher.username,
+                        error: err.message || 'Unexpected error during creation'
+                    });
                 }
-            });
+            }
         }
 
         res.json({
@@ -523,6 +523,54 @@ router.put('/:id', authenticateToken, authorize('admin'), async (req, res) => {
     } catch (error) {
         console.error('Update teacher error:', error);
         res.status(500).json({ success: false, message: 'Failed to update teacher' });
+    }
+});
+
+// Delete teacher
+router.delete('/:id', authenticateToken, authorize('admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if teacher exists
+        const teacher = await query('SELECT id FROM users WHERE id = $1', [id]);
+        if (teacher.length === 0) {
+            return res.status(404).json({ success: false, message: 'Teacher not found' });
+        }
+
+        // Delete the user (FK constraints handle cascading/setting null)
+        await query('DELETE FROM users WHERE id = $1', [id]);
+
+        res.json({
+            success: true,
+            message: 'Teacher deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete teacher error:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete teacher' });
+    }
+});
+
+// Bulk delete teachers
+router.post('/bulk-delete', authenticateToken, authorize('admin'), async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ success: false, message: 'Invalid IDs' });
+        }
+
+        await transaction(async (conn) => {
+            // FK constraints on sections and class_subjects are ON DELETE SET NULL, 
+            // so we can directly delete from users.
+            await conn.query('DELETE FROM users WHERE id = ANY($1)', [ids]);
+        });
+
+        res.json({
+            success: true,
+            message: `Successfully deleted ${ids.length} teachers`
+        });
+    } catch (error) {
+        console.error('Bulk delete teachers error:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete teachers' });
     }
 });
 

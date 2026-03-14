@@ -85,10 +85,10 @@ const schemas = {
         class_subject_id: Joi.number().integer().required(),
         exam_type_id: Joi.number().integer().required(),
         academic_year: Joi.string().required().max(20),
-        marks_obtained: Joi.number().min(0).optional(),
+        marks_obtained: Joi.number().min(0).allow(null).default(0),
         max_marks: Joi.number().min(0).required(),
-        is_absent: Joi.boolean().optional(),
-        remarks: Joi.string().optional()
+        is_absent: Joi.boolean().default(false),
+        remarks: Joi.string().allow('', null).optional()
     }),
 
     // Login validation

@@ -1,3 +1,11 @@
 Roll Number,Status,Date,Session,Remarks
-26001,Present,2025-01-01,Morning,
-26002,Absent,2025-01-01,Morning,Sick leave
+25001,Present,2025-03-08,Morning,
+25002,Present,2025-03-08,Morning,
+25003,Absent,2025-03-08,Morning,Sick leave - fever
+25004,Present,2025-03-08,Morning,
+25005,Present,2025-03-08,Morning,
+25001,Present,2025-03-07,Morning,
+25002,Absent,2025-03-07,Morning,Family emergency
+25003,Present,2025-03-07,Morning,
+25004,Present,2025-03-07,Morning,
+25005,Present,2025-03-07,Morning,

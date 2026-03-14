@@ -7,7 +7,7 @@ const whatsappService = require('../services/whatsappService');
 // Search students by name, roll number, or class
 router.get('/search-students', authenticateToken, async (req, res) => {
     try {
-        const { search, class_id, section_id } = req.query;
+        const { search, class_id, section_id, academic_year } = req.query;
         let sql = `
             SELECT DISTINCT 
                 s.id,
@@ -52,7 +52,22 @@ router.get('/search-students', authenticateToken, async (req, res) => {
             paramIndex++;
         }
 
-        sql += ` ORDER BY s.first_name, s.last_name LIMIT 20`;
+        if (academic_year) {
+            sql += ` AND (se.academic_year = $${paramIndex} OR se.academic_year LIKE $${paramIndex} || '%')`;
+            params.push(academic_year);
+            paramIndex++;
+        }
+
+        // Sorting logic
+        const { sortBy = 'name', order = 'ASC' } = req.query;
+        const validSortFields = {
+            'name': 's.first_name, s.last_name',
+            'roll_number': 'se.roll_number'
+        };
+        const sortField = validSortFields[sortBy] || validSortFields['name'];
+        const sortOrder = order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+
+        sql += ` ORDER BY ${sortField} ${sortOrder} LIMIT 20`;
 
         const students = await query(sql, params);
 
@@ -113,6 +128,8 @@ router.get('/student-complete-data/:studentId', authenticateToken, async (req, r
         }
         console.log('Student info fetched successfully');
 
+        const student = studentInfo[0];
+
         // Get attendance percentage
         console.log('Step 2: Fetching attendance data...');
         const attendanceData = await query(`
@@ -141,23 +158,43 @@ router.get('/student-complete-data/:studentId', authenticateToken, async (req, r
             JOIN class_subjects cs ON im.class_subject_id = cs.id 
             JOIN subjects sub ON cs.subject_id = sub.id
             WHERE im.student_id = $1
-            AND im.academic_year = EXTRACT(YEAR FROM CURRENT_DATE)::text 
+            AND (im.academic_year = $2 OR im.academic_year LIKE $2 || '%')
             AND im.is_absent = FALSE
             GROUP BY sub.subject_name
             ORDER BY sub.subject_name
-        `, [studentId]);
+        `, [studentId, student.academic_year]);
         console.log(`Marks data fetched: ${marksData.length} subjects`);
 
-        // Get overall grade
+        // Get overall grade and subject-wise grades
         console.log('Step 4: Fetching grade data...');
         const gradeData = await query(`
             SELECT 
                 AVG(sg.grade_point) as average_grade_point,
-                MAX(sg.grade_point) as highest_grade_point
+                MAX(sg.grade_point) as highest_grade_point,
+                MIN(sg.grade_point) as lowest_grade_point,
+                AVG(sg.percentage) as average_percentage
             FROM student_grades sg
             WHERE sg.student_id = $1
-            AND sg.academic_year = EXTRACT(YEAR FROM CURRENT_DATE)::text
-        `, [studentId]);
+            AND (sg.academic_year = $2 OR sg.academic_year LIKE $2 || '%')
+        `, [studentId, student.academic_year]);
+
+        // Get subject-wise grades
+        const subjectGrades = await query(`
+            SELECT 
+                sub.subject_name,
+                sg.percentage,
+                sg.grade_point,
+                gr.grade_name,
+                sg.total_marks_obtained,
+                sg.total_max_marks
+            FROM student_grades sg
+            JOIN class_subjects cs ON sg.class_subject_id = cs.id
+            JOIN subjects sub ON cs.subject_id = sub.id
+            LEFT JOIN grading_rules gr ON sg.grade_id = gr.id
+            WHERE sg.student_id = $1
+            AND (sg.academic_year = $2 OR sg.academic_year LIKE $2 || '%')
+            ORDER BY sub.subject_name
+        `, [studentId, student.academic_year]);
         console.log('Grade data fetched');
 
         // Get fee pending amount
@@ -173,11 +210,10 @@ router.get('/student-complete-data/:studentId', authenticateToken, async (req, r
 
         // Get WhatsApp number from student table (father or mother)
         console.log('Step 6: Getting parent WhatsApp...');
-        const student = studentInfo[0];
         const parentWhatsApp = student.father_whatsapp || student.mother_whatsapp || student.father_phone || student.mother_phone || null;
 
         const completeData = {
-            student: studentInfo[0],
+            student: student,
             attendance: {
                 percentage: parseFloat(attendancePercentage),
                 totalDays: attendanceData[0].total_days,
@@ -186,8 +222,11 @@ router.get('/student-complete-data/:studentId', authenticateToken, async (req, r
             marks: marksData,
             grade: {
                 averageGradePoint: parseFloat(gradeData[0]?.average_grade_point || 0),
-                highestGradePoint: parseFloat(gradeData[0]?.highest_grade_point || 0)
+                highestGradePoint: parseFloat(gradeData[0]?.highest_grade_point || 0),
+                lowestGradePoint: parseFloat(gradeData[0]?.lowest_grade_point || 0),
+                averagePercentage: parseFloat(gradeData[0]?.average_percentage || 0)
             },
+            subjectGrades: subjectGrades,
             fees: {
                 pendingAmount: parseFloat(feeData[0]?.total_pending || 0)
             },
@@ -197,7 +236,8 @@ router.get('/student-complete-data/:studentId', authenticateToken, async (req, r
                 father_phone: student.father_phone || 'N/A',
                 mother_phone: student.mother_phone || 'N/A'
             },
-            parentWhatsApp: parentWhatsApp
+            parentWhatsApp: parentWhatsApp,
+            academicYear: student.academic_year
         };
 
         console.log('All data fetched successfully, sending response');
@@ -232,7 +272,7 @@ router.post('/send-whatsapp-update', authenticateToken, async (req, res) => {
             });
         }
 
-        // Get complete student data
+        // Get student data
         const studentDataResponse = await query(`
             SELECT 
                 s.id,
@@ -267,6 +307,8 @@ router.post('/send-whatsapp-update', authenticateToken, async (req, res) => {
             });
         }
 
+        const student = studentDataResponse[0];
+
         // Get attendance percentage
         const attendanceData = await query(`
             SELECT 
@@ -292,21 +334,37 @@ router.post('/send-whatsapp-update', authenticateToken, async (req, res) => {
             JOIN class_subjects cs ON im.class_subject_id = cs.id 
             JOIN subjects sub ON cs.subject_id = sub.id
             WHERE im.student_id = $1
-            AND im.academic_year = EXTRACT(YEAR FROM CURRENT_DATE)::text
+            AND (im.academic_year = $2 OR im.academic_year LIKE $2 || '%')
             AND im.is_absent = FALSE
             GROUP BY sub.subject_name
             ORDER BY sub.subject_name
-        `, [studentId]);
+        `, [studentId, student.academic_year]);
 
-        // Get overall grade
+        // Get overall grade and subject-wise grades
         const gradeData = await query(`
             SELECT 
                 AVG(sg.grade_point) as average_grade_point,
-                MAX(sg.grade_point) as highest_grade_point
+                MAX(sg.grade_point) as highest_grade_point,
+                AVG(sg.percentage) as average_percentage
             FROM student_grades sg
             WHERE sg.student_id = $1
-            AND sg.academic_year = EXTRACT(YEAR FROM CURRENT_DATE)::text
-        `, [studentId]);
+            AND (sg.academic_year = $2 OR sg.academic_year LIKE $2 || '%')
+        `, [studentId, student.academic_year]);
+
+        // Get subject-wise grades
+        const subjectGrades = await query(`
+            SELECT 
+                sub.subject_name,
+                sg.percentage,
+                gr.grade_name
+            FROM student_grades sg
+            JOIN class_subjects cs ON sg.class_subject_id = cs.id
+            JOIN subjects sub ON cs.subject_id = sub.id
+            LEFT JOIN grading_rules gr ON sg.grade_id = gr.id
+            WHERE sg.student_id = $1
+            AND (sg.academic_year = $2 OR sg.academic_year LIKE $2 || '%')
+            ORDER BY sub.subject_name
+        `, [studentId, student.academic_year]);
 
         // Get fee pending amount
         const feeData = await query(`
@@ -318,11 +376,10 @@ router.post('/send-whatsapp-update', authenticateToken, async (req, res) => {
         `, [studentId]);
 
         // Get WhatsApp number from student table (father or mother)
-        const student = studentDataResponse[0];
         const parentWhatsApp = student.father_whatsapp || student.mother_whatsapp || student.father_phone || student.mother_phone || null;
 
         const completeData = {
-            student: studentDataResponse[0],
+            student: student,
             attendance: {
                 percentage: parseFloat(attendancePercentage),
                 totalDays: attendanceData[0].total_days,
@@ -331,8 +388,10 @@ router.post('/send-whatsapp-update', authenticateToken, async (req, res) => {
             marks: marksData,
             grade: {
                 averageGradePoint: parseFloat(gradeData[0]?.average_grade_point || 0),
-                highestGradePoint: parseFloat(gradeData[0]?.highest_grade_point || 0)
+                highestGradePoint: parseFloat(gradeData[0]?.highest_grade_point || 0),
+                averagePercentage: parseFloat(gradeData[0]?.average_percentage || 0)
             },
+            subjectGrades: subjectGrades,
             fees: {
                 pendingAmount: parseFloat(feeData[0]?.total_pending || 0)
             },
@@ -354,23 +413,28 @@ router.post('/send-whatsapp-update', authenticateToken, async (req, res) => {
         message += `📅 Academic Year: ${completeData.student.academic_year}\n\n`;
 
         message += `📊 *Academic Performance*\n`;
-        message += `📈 Attendance: ${completeData.attendance.percentage}% (${completeData.attendance.presentDays}/${completeData.attendance.totalDays} days)\n`;
+        message += `📈 Attendance: ${completeData.attendance.percentage}% (${completeData.attendance.presentDays}/${completeData.attendance.totalDays} days)\n\n`;
 
-        if (completeData.marks && completeData.marks.length > 0) {
-            message += `📝 Subject-wise Internal Marks:\n`;
+        // Show subject grades if available, otherwise show marks
+        if (completeData.subjectGrades && completeData.subjectGrades.length > 0) {
+            message += `📝 *Subject-wise Marks & Grades:*\n`;
+            completeData.subjectGrades.forEach(grade => {
+                message += `  • ${grade.subject_name}: ${grade.total_marks_obtained || 0}/${grade.total_max_marks || 100} - Grade ${grade.grade_name || 'N/A'}\n`;
+            });
+            message += `\n`;
+        } else if (completeData.marks && completeData.marks.length > 0) {
+            message += `📝 *Subject-wise Average Marks:*\n`;
             completeData.marks.forEach(mark => {
                 message += `  • ${mark.subject_name}: ${mark.average_marks.toFixed(1)}/100\n`;
             });
+            message += `\n`;
+        } else {
+            message += `📝 *Subject-wise Marks & Grades:*\n`;
+            message += `  No marks or grades available yet.\n\n`;
         }
-
-        message += `🏆 Overall Grade Point: ${completeData.grade.averageGradePoint.toFixed(2)}\n\n`;
 
         message += `💰 *Fee Information*\n`;
         message += `💳 Pending Amount: ₹${completeData.fees.pendingAmount.toFixed(2)}\n\n`;
-
-        message += `📱 *Parent Contact*\n`;
-        message += `👨 Father: ${completeData.parent.father_name || 'N/A'}\n`;
-        message += `👩 Mother: ${completeData.parent.mother_name || 'N/A'}\n\n`;
 
         message += `---\n`;
         message += `📧 For any queries, please contact the school administration.\n`;

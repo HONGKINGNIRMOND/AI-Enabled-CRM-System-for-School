@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { reportsAPI, studentsAPI, attendanceAPI, feesAPI, aiAPI, masterAPI } from '../../services/api';
+import { reportsAPI, studentsAPI, attendanceAPI, feesAPI, masterAPI } from '../../services/api';
+import DateTimeDisplay from '../common/DateTimeDisplay';
 import {
     Users,
     UserCheck,
@@ -121,11 +122,10 @@ const AdminDashboard = () => {
             const academicYear = `${currentYear}-${currentYear + 1}`;
 
             // Parallel data fetching
-            const [academicResponse, feeResponse, classWiseFeeResponse, studentsResponse] = await Promise.allSettled([
+            const [academicResponse, feeResponse, classWiseFeeResponse] = await Promise.allSettled([
                 reportsAPI.getAcademicAnalytics({ class_id: selectedClass }),
                 feesAPI.getStatistics({ academicYear, classId: selectedClass }),
-                feesAPI.getClassWiseStatistics({ academicYear }),
-                studentsAPI.getAll({ limit: 1, class_id: selectedClass }) // Use filter if supported
+                feesAPI.getClassWiseStatistics({ academicYear })
             ]);
 
             const academicData = academicResponse.status === 'fulfilled' ? academicResponse.value.data.data : {};
@@ -137,11 +137,10 @@ const AdminDashboard = () => {
                 pendingCount: 0
             };
             const classWiseFeeData = classWiseFeeResponse.status === 'fulfilled' ? classWiseFeeResponse.value.data.data : [];
-            const totalStudents = studentsResponse.status === 'fulfilled' ? studentsResponse.value.data.count : 0;
 
             setStats({
                 ...academicData,
-                totalStudents: totalStudents || academicData.totalStudents || 0,
+                totalStudents: academicData.totalStudents || 0,
                 academicYear
             });
 
@@ -162,7 +161,7 @@ const AdminDashboard = () => {
             setLoading(false);
         }
     };
-
+    // eslint-disable-next-line no-unused-vars
     const StatCard = ({ icon: Icon, title, value, subtext, color, trend }) => (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition">
             <div className="flex items-center justify-between">
@@ -207,6 +206,8 @@ const AdminDashboard = () => {
                                     </option>
                                 ))}
                             </select>
+
+                            <DateTimeDisplay className="hidden lg:flex" />
 
                             <div className="flex items-center gap-2 border-l pl-3 border-gray-200">
                                 <div className="hidden xs:block text-right">
@@ -434,6 +435,10 @@ const AdminDashboard = () => {
                                 <div className="p-2 bg-yellow-100 rounded-lg text-yellow-600"><DollarSign className="w-5 h-5" /></div>
                                 <span className="font-medium text-gray-700">Fee Management</span>
                             </Link>
+                            <Link to="/class-fee-structure" className="p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition flex items-center gap-3">
+                                <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><DollarSign className="w-5 h-5" /></div>
+                                <span className="font-medium text-gray-700">Class Fee Structure</span>
+                            </Link>
                             <Link to="/attendance" className="p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition flex items-center gap-3">
                                 <div className="p-2 bg-green-100 rounded-lg text-green-600"><Calendar className="w-5 h-5" /></div>
                                 <span className="font-medium text-gray-700">Mark Attendance</span>
@@ -445,6 +450,10 @@ const AdminDashboard = () => {
                             <Link to="/quick-action" className="p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition flex items-center gap-3">
                                 <div className="p-2 bg-green-100 rounded-lg text-green-600"><Send className="w-5 h-5" /></div>
                                 <span className="font-medium text-gray-700">Send Student Update</span>
+                            </Link>
+                            <Link to="/circulars" className="p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition flex items-center gap-3">
+                                <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600"><Send className="w-5 h-5" /></div>
+                                <span className="font-medium text-gray-700">E-Circulars (Teachers)</span>
                             </Link>
                         </div>
                     </>

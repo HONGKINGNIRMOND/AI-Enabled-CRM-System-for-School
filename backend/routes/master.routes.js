@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
 
 // Get all classes
-router.get('/classes', async (req, res) => {
+router.get('/classes', authenticateToken, async (req, res) => {
     try {
         const classes = await query(`
             SELECT * FROM classes 
@@ -25,7 +26,7 @@ router.get('/classes', async (req, res) => {
 });
 
 // Get sections by class
-router.get('/sections', async (req, res) => {
+router.get('/sections', authenticateToken, async (req, res) => {
     try {
         const { class_id } = req.query;
         let sql = 'SELECT * FROM sections';
@@ -53,7 +54,7 @@ router.get('/sections', async (req, res) => {
 });
 
 // Get all subjects (optionally filtered by class_id)
-router.get('/subjects', async (req, res) => {
+router.get('/subjects', authenticateToken, async (req, res) => {
     try {
         const { class_id } = req.query;
         let sql = 'SELECT * FROM subjects WHERE is_active = TRUE';
@@ -61,7 +62,7 @@ router.get('/subjects', async (req, res) => {
 
         if (class_id) {
             sql = `
-                SELECT s.*, u.full_name as teacher_name
+                SELECT s.*, cs.id as class_subject_id, u.full_name as teacher_name
                 FROM subjects s
                 JOIN class_subjects cs ON s.id = cs.subject_id
                 LEFT JOIN users u ON cs.teacher_id = u.id
@@ -81,12 +82,27 @@ router.get('/subjects', async (req, res) => {
 });
 
 // Get exam types
-router.get('/exam-types', async (req, res) => {
+router.get('/exam-types', authenticateToken, async (req, res) => {
     try {
-        const examTypes = await query('SELECT * FROM exam_types ORDER BY exam_name');
+        const examTypes = await query('SELECT * FROM exam_types ORDER BY id');
         res.json({ success: true, data: examTypes });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to fetch exam types' });
+    }
+});
+
+// Get all distinct academic years
+router.get('/academic-years', authenticateToken, async (req, res) => {
+    try {
+        const years = await query(`
+            SELECT DISTINCT academic_year 
+            FROM student_enrollments 
+            ORDER BY academic_year DESC
+        `);
+        res.json({ success: true, data: years.map(y => y.academic_year) });
+    } catch (error) {
+        console.error('Failed to fetch academic years:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch academic years' });
     }
 });
 

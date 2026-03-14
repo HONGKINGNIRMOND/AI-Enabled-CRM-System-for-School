@@ -19,7 +19,7 @@ const StudentFormModal = ({ student = null, onSave, onCancel }) => {
         class_id: student?.class_id || '',
         section_id: student?.section_id || '',
         assigned_teacher_id: student?.assigned_teacher_id || '',
-        academic_year: new Date().getFullYear().toString(),
+        academic_year: '2026-2027',
         father_name: student?.father_name || '',
         father_phone: student?.father_phone || '',
         father_whatsapp: student?.father_whatsapp || '',

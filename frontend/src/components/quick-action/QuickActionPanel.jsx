@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Send, User, BookOpen, TrendingUp, DollarSign, MessageSquare, CheckCircle, AlertCircle, Loader2, ArrowLeft, Filter } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Search, Send, User, BookOpen, TrendingUp, DollarSign, MessageSquare, CheckCircle, AlertCircle, Loader2, ArrowLeft, Filter, Users, X } from 'lucide-react';
 import api, { masterAPI } from '../../services/api';
 
 const QuickActionPanel = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
     const [students, setStudents] = useState([]);
-    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [selectedStudents, setSelectedStudents] = useState([]); // Array for multi-select
+    const [selectedStudent, setSelectedStudent] = useState(null); // Keep for single preview
     const [studentData, setStudentData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [searching, setSearching] = useState(false);
     const [sending, setSending] = useState(false);
+    const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [message, setMessage] = useState('');
     const [showMessagePreview, setShowMessagePreview] = useState(false);
     const [notification, setNotification] = useState(null);
@@ -127,11 +130,22 @@ const QuickActionPanel = () => {
         msg += `📈 Attendance: ${attendance.percentage}% (${attendance.presentDays}/${attendance.totalDays} days)\n`;
 
         if (marks && marks.length > 0) {
-            msg += `📝 Subject-wise Internal Marks:\n`;
-            marks.forEach((mark) => {
-                const average = safeNumber(mark.averageMarks ?? mark.average_marks);
-                msg += `  • ${mark.subject_name}: ${average.toFixed(1)}/100\n`;
-            });
+            // Group marks by exam type
+            const marksByExam = marks.reduce((acc, mark) => {
+                const examName = mark.exam_name || mark.examName || 'Internal';
+                if (!acc[examName]) acc[examName] = [];
+                acc[examName].push(mark);
+                return acc;
+            }, {});
+
+            msg += `📝 *Subject-wise Marks (Exam-wise):*\n`;
+            for (const [examName, examMarks] of Object.entries(marksByExam)) {
+                msg += `*${examName}:*\n`;
+                examMarks.forEach((mark) => {
+                    const average = safeNumber(mark.averageMarks ?? mark.average_marks);
+                    msg += `  • ${mark.subject_name}: ${average.toFixed(1)}/100\n`;
+                });
+            }
         }
 
         msg += `🏆 Overall Grade Point: ${gradePoint.toFixed(2)}\n\n`;
@@ -151,12 +165,14 @@ const QuickActionPanel = () => {
     const resetPanel = () => {
         setShowMessagePreview(false);
         setSelectedStudent(null);
+        setSelectedStudents([]);
         setStudentData(null);
         setSearchTerm('');
         setStudents([]);
+        setProgress({ current: 0, total: 0 });
     };
 
-    // Fetch master data
+    // Fetch initial data and handle URL params
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
@@ -170,13 +186,50 @@ const QuickActionPanel = () => {
                     classes: classesRes.data.success ? classesRes.data.data : [],
                     academicYears: yearsRes.data.success ? yearsRes.data.data : []
                 }));
+
+                // Check for studentId in URL
+                const params = new URLSearchParams(location.search);
+                const studentId = params.get('studentId');
+                const studentIds = params.get('studentIds');
+                
+                if (studentId) {
+                    // Fetch that specific student
+                    handleStudentSelect({ id: studentId });
+                } else if (studentIds) {
+                    const ids = studentIds.split(',');
+                    // For multiple, we just show selection summary
+                    // We need basic student info for them
+                    fetchStudentsByIds(ids);
+                }
             } catch (error) {
                 console.error('Failed to fetch initial data:', error);
             }
         };
 
         fetchInitialData();
-    }, []);
+    }, [location.search]);
+
+    const fetchStudentsByIds = async (ids) => {
+        setSearching(true);
+        try {
+            // Simplified: select students from list if already loaded, 
+            // or fetch them if not. For now, let's just use the IDs.
+            const studentsToSelect = [];
+            for (const id of ids) {
+                const response = await api.get(`/quick-action/student-complete-data/${id}`);
+                if (response.data.success) {
+                    studentsToSelect.push(response.data.data.student);
+                }
+            }
+            setSelectedStudents(studentsToSelect);
+            setShowMessagePreview(true); // Show bulk sending UI
+            setSelectedStudent(null); // Don't show individual preview
+        } catch (error) {
+            console.error('Fetch students by IDs error:', error);
+        } finally {
+            setSearching(false);
+        }
+    };
 
     // Fetch sections when class changes
     useEffect(() => {
@@ -212,36 +265,44 @@ const QuickActionPanel = () => {
         });
     };
 
-    // Send WhatsApp message
-    const sendWhatsAppMessage = async () => {
-        if (!selectedStudent || !studentData) return;
+    // Send WhatsApp messages (support bulk)
+    const sendWhatsAppMessages = async () => {
+        const studentsToSend = selectedStudent ? [selectedStudent] : selectedStudents;
+        if (studentsToSend.length === 0) return;
 
         setSending(true);
-        try {
-            const response = await api.post('/quick-action/send-whatsapp-update', {
-                studentId: selectedStudent.id
-            });
+        setProgress({ current: 0, total: studentsToSend.length });
+        
+        let successCount = 0;
+        let failCount = 0;
 
-            if (response.data.success) {
-                setNotification({
-                    type: 'success',
-                    message: response.data.message
+        for (let i = 0; i < studentsToSend.length; i++) {
+            const student = studentsToSend[i];
+            try {
+                const response = await api.post('/quick-action/send-whatsapp-update', {
+                    studentId: student.id
                 });
-                resetPanel();
-            } else {
-                setNotification({
-                    type: 'error',
-                    message: response.data.message || 'Failed to send message'
-                });
+
+                if (response.data.success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (error) {
+                console.error(`Send message error for student ${student.id}:`, error);
+                failCount++;
             }
-        } catch (error) {
-            console.error('Send message error:', error);
-            setNotification({
-                type: 'error',
-                message: 'Failed to send WhatsApp message'
-            });
-        } finally {
-            setSending(false);
+            setProgress(prev => ({ ...prev, current: i + 1 }));
+        }
+
+        setNotification({
+            type: failCount === 0 ? 'success' : 'error',
+            message: `Successfully sent ${successCount} messages. ${failCount > 0 ? `Failed: ${failCount}` : ''}`
+        });
+        
+        setSending(false);
+        if (failCount === 0) {
+            resetPanel();
         }
     };
 
@@ -259,6 +320,26 @@ const QuickActionPanel = () => {
         setSelectedStudent(student);
         getStudentData(student.id);
         setShowMessagePreview(true);
+        setSelectedStudents([]); // Clear multi-select when single student is picked
+    };
+
+    // Toggle multi-select checkbox
+    const toggleStudentSelection = (e, student) => {
+        e.stopPropagation(); // Prevents triggers single select
+        setSelectedStudents(prev => {
+            const exists = prev.find(s => s.id === student.id);
+            if (exists) {
+                return prev.filter(s => s.id !== student.id);
+            } else {
+                return [...prev, student];
+            }
+        });
+        setSelectedStudent(null); // Clear single preview
+        setShowMessagePreview(true);
+    };
+
+    const isStudentSelected = (studentId) => {
+        return selectedStudents.some(s => s.id === studentId);
     };
 
     // Clear notification
@@ -390,32 +471,131 @@ const QuickActionPanel = () => {
                 {/* Search Results */}
                 {students.length > 0 && (
                     <div className="mt-4 border border-gray-200 rounded-lg max-h-60 overflow-y-auto">
+                        <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-600">{students.length} students found</span>
+                            <button 
+                                onClick={() => {
+                                    if (selectedStudents.length === students.length) {
+                                        setSelectedStudents([]);
+                                    } else {
+                                        setSelectedStudents([...students]);
+                                        setSelectedStudent(null);
+                                        setShowMessagePreview(true);
+                                    }
+                                }}
+                                className="text-xs text-blue-600 hover:underline font-medium"
+                            >
+                                {selectedStudents.length === students.length ? 'Deselect All' : 'Select All'}
+                            </button>
+                        </div>
                         {students.map((student) => (
                             <div
                                 key={student.id}
                                 onClick={() => handleStudentSelect(student)}
-                                className="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                                className={`p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors flex items-center justify-between ${selectedStudent?.id === student.id ? 'bg-blue-50' : ''}`}
                             >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                            <User className="w-5 h-5 text-blue-600" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-gray-800">
-                                                {student.first_name} {student.last_name}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                {student.class_name} - {student.section_name} | Roll: {student.roll_number}
-                                            </p>
-                                        </div>
+                                <div className="flex items-center gap-3">
+                                    <div 
+                                        onClick={(e) => toggleStudentSelection(e, student)}
+                                        className="mr-2"
+                                    >
+                                        <input 
+                                            type="checkbox" 
+                                            readOnly 
+                                            checked={isStudentSelected(student.id)}
+                                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                                        />
                                     </div>
+                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <User className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-gray-800">
+                                            {student.first_name} {student.last_name}
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            {student.class_name} - {student.section_name} | Roll: {student.roll_number}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                        title="Quick Send"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleStudentSelect(student);
+                                        }}
+                                    >
+                                        <Send className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* Selection Summary (Multiple) */}
+            {showMessagePreview && selectedStudents.length > 0 && (
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6 border-l-4 border-blue-500">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-blue-500" />
+                            Bulk Selection: {selectedStudents.length} Students Selected
+                        </h3>
+                        <button 
+                            onClick={() => setSelectedStudents([])}
+                            className="p-1 hover:bg-gray-100 rounded-lg"
+                        >
+                            <X className="w-5 h-5 text-gray-400" />
+                        </button>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mb-6">
+                        {selectedStudents.map(s => (
+                            <div key={s.id} className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                                <span>{s.first_name} {s.last_name}</span>
+                                <button 
+                                    onClick={(e) => toggleStudentSelection(e, s)}
+                                    className="text-gray-400 hover:text-red-500"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="bg-blue-50 p-4 rounded-lg mb-6 text-sm text-blue-700 flex items-start gap-2">
+                        <AlertCircle className="w-5 h-5 shrink-0" />
+                        <p>
+                            You are about to send individual academic updates to the parents of these {selectedStudents.length} students. 
+                            Each message will include specific performance data for that student.
+                        </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={sendWhatsAppMessages}
+                            disabled={sending}
+                            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                        >
+                            {sending ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Send className="w-5 h-5" />
+                            )}
+                            {sending ? `Sending... (${progress.current}/${progress.total})` : 'Send WhatsApp to All'}
+                        </button>
+                        <button
+                            onClick={resetPanel}
+                            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Student Data Preview */}
             {showMessagePreview && studentData && (
@@ -502,12 +682,30 @@ const QuickActionPanel = () => {
 
                                     {studentData.marks && studentData.marks.length > 0 && (
                                         <div className="mt-4">
-                                            <p className="text-sm text-gray-600 mb-2">Subject Marks:</p>
-                                            <div className="space-y-1">
-                                                {studentData.marks.map((mark, index) => (
-                                                    <div key={index} className="flex justify-between text-sm">
-                                                        <span className="text-gray-600">{mark.subject_name}:</span>
-                                                        <span className="font-medium text-gray-800">{safeNumber(mark.averageMarks).toFixed(1)}/100</span>
+                                            <p className="text-sm text-gray-600 mb-2">Subject Marks (Exam-wise):</p>
+                                            <div className="space-y-3">
+                                                {Object.entries(
+                                                    studentData.marks.reduce((acc, mark) => {
+                                                        const examName = mark.exam_name || mark.examName || 'Internal';
+                                                        if (!acc[examName]) acc[examName] = [];
+                                                        acc[examName].push(mark);
+                                                        return acc;
+                                                    }, {})
+                                                ).map(([examName, examMarks]) => (
+                                                    <div key={examName} className="border-l-2 border-blue-100 pl-3">
+                                                        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">
+                                                            {examName}
+                                                        </p>
+                                                        <div className="space-y-1">
+                                                            {examMarks.map((mark, index) => (
+                                                                <div key={index} className="flex justify-between text-sm gap-4">
+                                                                    <span className="text-gray-600 truncate">{mark.subject_name}</span>
+                                                                    <span className="font-medium text-gray-800 shrink-0">
+                                                                        {safeNumber(mark.averageMarks).toFixed(1)}/100
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -531,7 +729,7 @@ const QuickActionPanel = () => {
 
                         <div className="flex gap-3">
                             <button
-                                onClick={sendWhatsAppMessage}
+                                onClick={sendWhatsAppMessages}
                                 disabled={sending || !studentData.parentWhatsApp}
                                 className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                             >

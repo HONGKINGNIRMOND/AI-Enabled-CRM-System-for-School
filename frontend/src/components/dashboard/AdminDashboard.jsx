@@ -6,6 +6,7 @@ import DateTimeDisplay from '../common/DateTimeDisplay';
 import {
     Users,
     UserCheck,
+    Building2,
     BookOpen,
     TrendingUp,
     LogOut,
@@ -430,6 +431,10 @@ const AdminDashboard = () => {
                             <Link to="/teachers" className="p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition flex items-center gap-3">
                                 <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600"><GraduationCap className="w-5 h-5" /></div>
                                 <span className="font-medium text-gray-700">Teacher Management</span>
+                            </Link>
+                            <Link to="/hods" className="p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition flex items-center gap-3">
+                                <div className="p-2 bg-purple-100 rounded-lg text-purple-600"><Building2 className="w-5 h-5" /></div>
+                                <span className="font-medium text-gray-700">HOD Management</span>
                             </Link>
                             <Link to="/fees" className="p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition flex items-center gap-3">
                                 <div className="p-2 bg-yellow-100 rounded-lg text-yellow-600"><DollarSign className="w-5 h-5" /></div>

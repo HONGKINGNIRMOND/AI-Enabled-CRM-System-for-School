@@ -23,6 +23,7 @@ const TeacherManagement = () => {
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [filterClass, setFilterClass] = useState('');
+    const [filterSubject, setFilterSubject] = useState('');
 
     // Teacher creation state
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -381,8 +382,18 @@ const TeacherManagement = () => {
                                             <option key={c.id} value={c.id}>{c.class_name}</option>
                                         ))}
                                     </select>
+                                    <select
+                                        value={filterSubject}
+                                        onChange={(e) => setFilterSubject(e.target.value)}
+                                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                                    >
+                                        <option value="">All Subjects</option>
+                                        {subjects.map(s => (
+                                            <option key={s.id} value={s.id}>{s.subject_name}</option>
+                                        ))}
+                                    </select>
                                     <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full">
-                                        {assignments.filter(a => !filterClass || a.class_id === parseInt(filterClass)).length} Total
+                                        {assignments.filter(a => (!filterClass || a.class_id === parseInt(filterClass)) && (!filterSubject || a.subject_id === parseInt(filterSubject))).length} Total
                                     </span>
                                 </div>
                             </div>
@@ -397,15 +408,15 @@ const TeacherManagement = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {assignments.filter(a => !filterClass || a.class_id === parseInt(filterClass)).length === 0 ? (
+                                        {assignments.filter(a => (!filterClass || a.class_id === parseInt(filterClass)) && (!filterSubject || a.subject_id === parseInt(filterSubject))).length === 0 ? (
                                             <tr>
                                                 <td colSpan="4" className="py-12 text-center text-gray-500 font-medium italic">
-                                                    No assignments found for the selected class.
+                                                    No assignments found for the filtering criteria.
                                                 </td>
                                             </tr>
                                         ) : (
                                             assignments
-                                                .filter(a => !filterClass || a.class_id === parseInt(filterClass))
+                                                .filter(a => (!filterClass || a.class_id === parseInt(filterClass)) && (!filterSubject || a.subject_id === parseInt(filterSubject)))
                                                 .map((asgn) => (
                                                     <tr key={asgn.id} className="hover:bg-blue-50/10 transition-colors group">
                                                         <td className="py-4 px-6">
@@ -453,6 +464,26 @@ const TeacherManagement = () => {
                             Registered Teachers
                         </h2>
                         <div className="flex items-center gap-4">
+                            <select
+                                value={filterClass}
+                                onChange={(e) => setFilterClass(e.target.value)}
+                                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                            >
+                                <option value="">All Classes</option>
+                                {classes.map(c => (
+                                    <option key={c.id} value={c.id}>{c.class_name}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={filterSubject}
+                                onChange={(e) => setFilterSubject(e.target.value)}
+                                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                            >
+                                <option value="">All Subjects</option>
+                                {subjects.map(s => (
+                                    <option key={s.id} value={s.id}>{s.subject_name}</option>
+                                ))}
+                            </select>
                             {selectedTeachers.length > 0 && (
                                 <button
                                     onClick={handleBulkDeleteTeachers}
@@ -464,7 +495,17 @@ const TeacherManagement = () => {
                                 </button>
                             )}
                             <span className="px-4 py-1.5 bg-blue-100 text-blue-700 text-sm font-bold rounded-full">
-                                {teachers.length} Active Staff
+                                {
+                                    teachers.filter(teacher => {
+                                        if (!filterClass && !filterSubject) return true;
+                                        const teacherAssignments = assignments.filter(a => a.teacher_id === teacher.id);
+                                        return teacherAssignments.some(a => {
+                                            const classMatch = !filterClass || a.class_id === parseInt(filterClass);
+                                            const subjectMatch = !filterSubject || a.subject_id === parseInt(filterSubject);
+                                            return classMatch && subjectMatch;
+                                        });
+                                    }).length
+                                } Active Staff
                             </span>
                         </div>
                     </div>
@@ -484,19 +525,35 @@ const TeacherManagement = () => {
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Email Address</th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Phone</th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
-                                    <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Classes</th>
+                                    <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Classes & Subjects</th>
                                     <th className="text-right py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {teachers.length === 0 ? (
+                                {teachers.filter(teacher => {
+                                    if (!filterClass && !filterSubject) return true;
+                                    const teacherAssignments = assignments.filter(a => a.teacher_id === teacher.id);
+                                    return teacherAssignments.some(a => {
+                                        const classMatch = !filterClass || a.class_id === parseInt(filterClass);
+                                        const subjectMatch = !filterSubject || a.subject_id === parseInt(filterSubject);
+                                        return classMatch && subjectMatch;
+                                    });
+                                }).length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="py-12 text-center text-gray-500 font-medium italic">
-                                            No teachers registered in the system.
+                                        <td colSpan="7" className="py-12 text-center text-gray-500 font-medium italic">
+                                            No teachers found matching the selected filters.
                                         </td>
                                     </tr>
                                 ) : (
-                                    teachers.map((teacher) => (
+                                    teachers.filter(teacher => {
+                                        if (!filterClass && !filterSubject) return true;
+                                        const teacherAssignments = assignments.filter(a => a.teacher_id === teacher.id);
+                                        return teacherAssignments.some(a => {
+                                            const classMatch = !filterClass || a.class_id === parseInt(filterClass);
+                                            const subjectMatch = !filterSubject || a.subject_id === parseInt(filterSubject);
+                                            return classMatch && subjectMatch;
+                                        });
+                                    }).map((teacher) => (
                                         <tr key={teacher.id} className={`hover:bg-blue-50/10 transition-colors group ${selectedTeachers.includes(teacher.id) ? 'bg-blue-50/20' : ''}`}>
                                             <td className="py-4 px-6 text-left">
                                                 <input
@@ -534,11 +591,11 @@ const TeacherManagement = () => {
                                                         .filter(a => a.teacher_id === teacher.id)
                                                         .map((a, i) => (
                                                             <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded border border-blue-100">
-                                                                {a.class_name}
+                                                                {a.class_name} - {a.subject_name}
                                                             </span>
                                                         ))}
                                                     {assignments.filter(a => a.teacher_id === teacher.id).length === 0 && (
-                                                        <span className="text-xs text-gray-400 italic">No classes</span>
+                                                        <span className="text-xs text-gray-400 italic">No assignments</span>
                                                     )}
                                                 </div>
                                             </td>

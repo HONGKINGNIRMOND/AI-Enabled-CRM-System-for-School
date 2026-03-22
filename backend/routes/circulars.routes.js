@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { authenticateToken } = require('../middleware/auth');
+const { pool } = require('../config/database');
 
 // Storage for circular attachments (PDF, Excel, etc.)
 const circularsDir = path.join(__dirname, '..', 'public', 'circulars');
@@ -37,10 +38,11 @@ const upload = multer({
         const allowed = [
             'application/pdf',
             'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'text/csv'
         ];
         if (!allowed.includes(file.mimetype)) {
-            return cb(new Error('Only PDF and Excel files are allowed'));
+            return cb(new Error('Only PDF, Excel and CSV files are allowed'));
         }
         cb(null, true);
     }
@@ -71,17 +73,17 @@ const writeMetadata = (data) => {
 // All circular routes require authentication
 router.use(authenticateToken);
 
-// Create a new e-circular (admin only)
+// Create a new e-circular
 router.post('/', upload.array('files', 5), (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (!['admin', 'hod'].includes(req.user.role)) {
             return res.status(403).json({
                 success: false,
-                message: 'Only admins can create circulars'
+                message: 'Only admins and HODs can create circulars'
             });
         }
 
-        const { title, message, audience } = req.body;
+        let { title, message, targetRoles, targetDepartments, targetSubjects, targetUsers, scheduledDate } = req.body;
 
         if (!title || !message) {
             return res.status(400).json({
@@ -103,13 +105,25 @@ router.post('/', upload.array('files', 5), (req, res) => {
             size: file.size
         }));
 
+        // Parse JSON targets
+        const parseJsonField = (field) => {
+            if (!field) return [];
+            try { return typeof field === 'string' ? JSON.parse(field) : field; } 
+            catch { return []; }
+        };
+
         const circular = {
             id,
             title,
             message,
-            audience: audience || 'teachers',
+            targetRoles: parseJsonField(targetRoles),
+            targetDepartments: parseJsonField(targetDepartments),
+            targetSubjects: parseJsonField(targetSubjects),
+            targetUsers: parseJsonField(targetUsers),
+            scheduledDate: scheduledDate || null,
             createdBy: req.user.fullName || req.user.username || req.user.email,
             creatorId: req.user.id,
+            creatorRole: req.user.role,
             createdAt: now,
             attachments
         };
@@ -132,17 +146,49 @@ router.post('/', upload.array('files', 5), (req, res) => {
 });
 
 // Get all circulars visible to the current user
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const metadata = readMetadata();
-
-        // For now, audience is simple: 'teachers' or 'all'
         const role = req.user.role || '';
+        const userId = req.user.id;
+        const departmentId = req.user.departmentId;
+        
+        // Find subjects taught by the current user
+        let userSubjects = [];
+        if (role === 'teacher' || role === 'hod') {
+            const subjectRes = await pool.query('SELECT subject_id FROM class_subjects WHERE teacher_id = $1', [userId]);
+            userSubjects = subjectRes.rows.map(r => r.subject_id);
+        }
+
+        const now = new Date();
+
         const filtered = metadata.filter((c) => {
+            // Admins see everything, Creators see their own
+            if (role === 'admin' || c.creatorId === userId) return true;
+
+            // Check if scheduled date is in the future
+            if (c.scheduledDate && new Date(c.scheduledDate) > now) {
+                return false;
+            }
+
+            // Legacy circulars without target rules
             if (c.audience === 'all') return true;
             if (c.audience === 'teachers' && role === 'teacher') return true;
-            if (role === 'admin') return true; // admin sees all
-            return false;
+
+            // Target mapping logic (OR condition across specified targets)
+            let isTargeted = false;
+            
+            // If no targets are specified, it's not visible (or visible to none besides creator/admin)
+            if (!c.targetRoles?.length && !c.targetDepartments?.length && !c.targetSubjects?.length && !c.targetUsers?.length && !c.audience) {
+               return false;
+            }
+
+            if (c.targetRoles?.includes(role)) isTargeted = true;
+            if (departmentId && c.targetDepartments?.includes(departmentId)) isTargeted = true;
+            if (c.targetUsers?.includes(userId)) isTargeted = true;
+            if (c.targetSubjects?.some(subId => userSubjects.includes(subId))) isTargeted = true;
+
+            return isTargeted;
         });
 
         // Attach absolute URLs for files
@@ -168,16 +214,9 @@ router.get('/', (req, res) => {
     }
 });
 
-// Delete a circular (admin only)
+// Delete a circular (admin and creator HODs)
 router.delete('/:id', (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({
-                success: false,
-                message: 'Only admins can delete circulars'
-            });
-        }
-
         const { id } = req.params;
         const metadata = readMetadata();
         const index = metadata.findIndex((c) => c.id === id);
@@ -190,6 +229,14 @@ router.delete('/:id', (req, res) => {
         }
 
         const circular = metadata[index];
+
+        // Check permissions
+        if (req.user.role !== 'admin' && circular.creatorId !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not have permission to delete this circular'
+            });
+        }
 
         // Delete associated files
         if (circular.attachments && circular.attachments.length > 0) {
@@ -218,6 +265,67 @@ router.delete('/:id', (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to delete circular'
+        });
+    }
+});
+
+// Preview recipients count based on target criteria
+router.post('/preview-recipients', async (req, res) => {
+    try {
+        if (!['admin', 'hod'].includes(req.user.role)) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const { targetRoles, targetDepartments, targetSubjects, targetUsers } = req.body;
+        
+        let sqlQuery = `
+            SELECT DISTINCT u.id 
+            FROM users u
+            JOIN roles ro ON u.role_id = ro.id
+            LEFT JOIN class_subjects cs ON u.id = cs.teacher_id
+            WHERE u.is_active = true
+        `;
+        const params = [];
+        const conditions = [];
+
+        if (targetRoles && targetRoles.length > 0) {
+            params.push(targetRoles);
+            conditions.push(`ro.role_name = ANY($${params.length})`);
+        }
+
+        if (targetDepartments && targetDepartments.length > 0) {
+            params.push(targetDepartments);
+            conditions.push(`u.department_id = ANY($${params.length})`);
+        }
+
+        if (targetSubjects && targetSubjects.length > 0) {
+            params.push(targetSubjects);
+            conditions.push(`cs.subject_id = ANY($${params.length})`);
+        }
+
+        if (targetUsers && targetUsers.length > 0) {
+            params.push(targetUsers);
+            conditions.push(`u.id = ANY($${params.length})`);
+        }
+
+        if (conditions.length > 0) {
+            sqlQuery += ` AND (${conditions.join(' OR ')})`;
+        } else {
+            // If no criteria, return 0
+            return res.json({ success: true, count: 0 });
+        }
+
+        const result = await pool.query(sqlQuery, params);
+        
+        return res.json({
+            success: true,
+            count: result.rows.length
+        });
+    } catch (error) {
+        console.error('Preview recipients error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to generate preview'
         });
     }
 });

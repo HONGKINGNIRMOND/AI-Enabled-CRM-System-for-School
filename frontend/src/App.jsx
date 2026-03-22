@@ -10,6 +10,11 @@ import AttendanceMarking from './components/Attendance/AttendanceMarking';
 import AttendanceReports from './components/Reports/AttendanceReports';
 import MarksEntry from './components/Marks/MarksEntry';
 import TeacherManagement from './components/dashboard/TeacherManagement';
+import HodManagement from './components/dashboard/HodManagement';
+import HODDashboard from './components/dashboard/HODDashboard';
+import SubjectsFaculty from './components/hod/SubjectsFaculty';
+import AttendanceTracking from './components/hod/AttendanceTracking';
+import ReviewMarks from './components/hod/ReviewMarks';
 import Reports from './components/Reports/Reports';
 import FeeManagement from './components/Fees/FeeManagement';
 import ClassFeeStructure from './components/Fees/ClassFeeStructure';
@@ -52,6 +57,8 @@ const DashboardRouter = () => {
       return <AdminDashboard />;
     case 'teacher':
       return <TeacherDashboard />;
+    case 'hod':
+      return <HODDashboard />;
     default:
       return <Navigate to="/login" replace />;
   }
@@ -76,7 +83,7 @@ function App() {
           <Route
             path="/students"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'hod']}>
                 <StudentList />
               </ProtectedRoute>
             }
@@ -85,7 +92,7 @@ function App() {
           <Route
             path="/students/:id"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'hod']}>
                 <StudentDetails />
               </ProtectedRoute>
             }
@@ -94,7 +101,7 @@ function App() {
           <Route
             path="/attendance"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'hod']}>
                 <AttendanceMarking />
               </ProtectedRoute>
             }
@@ -103,7 +110,7 @@ function App() {
           <Route
             path="/attendance/reports"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'hod']}>
                 <AttendanceReports />
               </ProtectedRoute>
             }
@@ -121,8 +128,50 @@ function App() {
           <Route
             path="/teachers"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'hod']}>
                 <TeacherManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hods"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <HodManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hod/subjects"
+            element={
+              <ProtectedRoute allowedRoles={['hod']}>
+                <SubjectsFaculty />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hod/attendance"
+            element={
+              <ProtectedRoute allowedRoles={['hod']}>
+                <AttendanceTracking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hod/marks"
+            element={
+              <ProtectedRoute allowedRoles={['hod']}>
+                <ReviewMarks />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hod/analytics"
+            element={
+              <ProtectedRoute allowedRoles={['hod']}>
+                <div className="p-8 text-center text-gray-500">Department Analytics Coming Soon</div>
               </ProtectedRoute>
             }
           />
@@ -139,7 +188,7 @@ function App() {
           <Route
             path="/fees"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'hod']}>
                 <FeeManagement />
               </ProtectedRoute>
             }
@@ -157,7 +206,7 @@ function App() {
           <Route
             path="/ai-predictions"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'hod']}>
                 <AIPredictions />
               </ProtectedRoute>
             }
@@ -166,7 +215,7 @@ function App() {
           <Route
             path="/quick-action"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'hod']}>
                 <QuickActionPanel />
               </ProtectedRoute>
             }
@@ -175,7 +224,7 @@ function App() {
           <Route
             path="/circulars"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'hod']}>
                 <Circulars />
               </ProtectedRoute>
             }

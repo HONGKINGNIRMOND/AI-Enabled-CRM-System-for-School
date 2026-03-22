@@ -49,13 +49,24 @@ class WhatsAppService {
         message += `📈 Attendance: ${attendance.percentage}% (${attendance.presentDays}/${attendance.totalDays} days)\n`;
         
         if (marks && marks.length > 0) {
-            message += `📝 Subject-wise Internal Marks:\n`;
-            marks.forEach(mark => {
-                message += `  • ${mark.subject_name}: ${mark.average_marks.toFixed(1)}/100\n`;
-            });
+            // Group marks by exam type
+            const marksByExam = marks.reduce((acc, mark) => {
+                const examName = mark.exam_name || 'Internal';
+                if (!acc[examName]) acc[examName] = [];
+                acc[examName].push(mark);
+                return acc;
+            }, {});
+
+            message += `📝 Subject-wise Marks (Exam-wise):\n`;
+            for (const [examName, examMarks] of Object.entries(marksByExam)) {
+                message += `*${examName}:*\n`;
+                examMarks.forEach(mark => {
+                    message += `  • ${mark.subject_name}: ${mark.average_marks.toFixed(1)}/100\n`;
+                });
+            }
         }
         
-        message += `🏆 Overall Grade Point: ${grade.averageGradePoint.toFixed(2)}\n\n`;
+        message += `\n🏆 Overall Grade Point: ${grade.averageGradePoint.toFixed(2)}\n\n`;
         
         message += `💰 *Fee Information*\n`;
         message += `💳 Pending Amount: ₹${fees.pendingAmount.toFixed(2)}\n\n`;

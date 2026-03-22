@@ -16,7 +16,7 @@ const upload = multer({
 });
 
 // Get all teachers
-router.get('/', authenticateToken, authorize('admin'), async (req, res) => {
+router.get('/', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const teachers = await query(`
             SELECT u.id, u.username, u.full_name, u.email, u.phone, u.is_active 
@@ -33,7 +33,7 @@ router.get('/', authenticateToken, authorize('admin'), async (req, res) => {
 });
 
 // Create new teacher
-router.post('/', authenticateToken, authorize('admin'), validate(schemas.user), async (req, res) => {
+router.post('/', authenticateToken, authorize('admin', 'hod'), validate(schemas.user), async (req, res) => {
     try {
         const { username, email, password, full_name, phone } = req.validatedData;
 
@@ -79,7 +79,7 @@ router.post('/', authenticateToken, authorize('admin'), validate(schemas.user), 
 });
 
 // Bulk create teachers
-router.post('/bulk', authenticateToken, authorize('admin'), upload.single('file'), async (req, res) => {
+router.post('/bulk', authenticateToken, authorize('admin', 'hod'), upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -290,7 +290,7 @@ router.post('/bulk', authenticateToken, authorize('admin'), upload.single('file'
 });
 
 // Get teacher assignments
-router.get('/assignments', authenticateToken, authorize('admin'), async (req, res) => {
+router.get('/assignments', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const assignments = await query(`
             SELECT 
@@ -315,7 +315,7 @@ router.get('/assignments', authenticateToken, authorize('admin'), async (req, re
 });
 
 // Assign teacher to class/subject
-router.post('/assign', authenticateToken, authorize('admin'), async (req, res) => {
+router.post('/assign', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const { class_id, subject_id, teacher_id } = req.body;
 
@@ -344,7 +344,7 @@ router.post('/assign', authenticateToken, authorize('admin'), async (req, res) =
 });
 
 // Remove assignment
-router.delete('/assign/:id', authenticateToken, authorize('admin'), async (req, res) => {
+router.delete('/assign/:id', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const { id } = req.params;
         await query('UPDATE class_subjects SET teacher_id = NULL, updated_at = NOW() WHERE id = $1', [id]);
@@ -356,7 +356,7 @@ router.delete('/assign/:id', authenticateToken, authorize('admin'), async (req, 
 });
 
 // Assign class teacher to section
-router.post('/assign-class-teacher', authenticateToken, authorize('admin'), async (req, res) => {
+router.post('/assign-class-teacher', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const { section_id, teacher_id } = req.body;
 
@@ -416,7 +416,7 @@ router.post('/assign-class-teacher', authenticateToken, authorize('admin'), asyn
 });
 
 // Remove class teacher from section
-router.delete('/assign-class-teacher/:sectionId', authenticateToken, authorize('admin'), async (req, res) => {
+router.delete('/assign-class-teacher/:sectionId', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const { sectionId } = req.params;
 
@@ -455,7 +455,7 @@ router.delete('/assign-class-teacher/:sectionId', authenticateToken, authorize('
 });
 
 // Get class teachers for all sections
-router.get('/class-teachers', authenticateToken, authorize('admin'), async (req, res) => {
+router.get('/class-teachers', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const classTeachers = await query(`
             SELECT 
@@ -486,7 +486,7 @@ router.get('/class-teachers', authenticateToken, authorize('admin'), async (req,
 });
 
 // Update teacher profile
-router.put('/:id', authenticateToken, authorize('admin'), async (req, res) => {
+router.put('/:id', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const { id } = req.params;
         const { username, email, full_name, phone, password, is_active } = req.body;
@@ -527,7 +527,7 @@ router.put('/:id', authenticateToken, authorize('admin'), async (req, res) => {
 });
 
 // Delete teacher
-router.delete('/:id', authenticateToken, authorize('admin'), async (req, res) => {
+router.delete('/:id', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -551,7 +551,7 @@ router.delete('/:id', authenticateToken, authorize('admin'), async (req, res) =>
 });
 
 // Bulk delete teachers
-router.post('/bulk-delete', authenticateToken, authorize('admin'), async (req, res) => {
+router.post('/bulk-delete', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {

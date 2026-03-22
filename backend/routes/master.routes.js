@@ -106,4 +106,20 @@ router.get('/academic-years', authenticateToken, async (req, res) => {
     }
 });
 
+// Get all departments
+router.get('/departments', authenticateToken, async (req, res) => {
+    try {
+        const departments = await query(`
+            SELECT id, department_name, description 
+            FROM departments 
+            WHERE is_active = TRUE
+            ORDER BY department_name
+        `);
+        res.json({ success: true, data: departments });
+    } catch (error) {
+        console.error('Failed to fetch departments:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch departments' });
+    }
+});
+
 module.exports = router;

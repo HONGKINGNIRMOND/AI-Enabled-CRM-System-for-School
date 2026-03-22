@@ -38,6 +38,8 @@ const aiRoutes = require('./routes/ai.routes');
 const quickActionRoutes = require('./routes/quick-action.routes');
 const classFeeStructureRoutes = require('./routes/classFeeStructure.routes');
 const circularRoutes = require('./routes/circulars.routes');
+const adminHodRoutes = require('./routes/admin-hod.routes');
+const hodRoutes = require('./routes/hod.routes');
 
 // Register routes
 app.use('/api/auth', authRoutes);
@@ -54,6 +56,8 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/quick-action', quickActionRoutes);
 app.use('/api/class-fee-structure', classFeeStructureRoutes);
 app.use('/api/circulars', circularRoutes);
+app.use('/api/admin/hod', adminHodRoutes);
+app.use('/api/hod', hodRoutes);
 
 // Static template and circular files
 app.use('/templates', express.static(path.join(__dirname, 'public', 'templates')));

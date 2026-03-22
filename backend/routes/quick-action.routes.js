@@ -151,17 +151,19 @@ router.get('/student-complete-data/:studentId', authenticateToken, async (req, r
         const marksData = await query(`
             SELECT 
                 sub.subject_name,
+                e.exam_name,
                 AVG(im.marks_obtained) as average_marks,
                 MAX(im.marks_obtained) as highest_marks,
                 MIN(im.marks_obtained) as lowest_marks
             FROM internal_marks im
             JOIN class_subjects cs ON im.class_subject_id = cs.id 
             JOIN subjects sub ON cs.subject_id = sub.id
+            JOIN exam_types e ON im.exam_type_id = e.id
             WHERE im.student_id = $1
             AND (im.academic_year = $2 OR im.academic_year LIKE $2 || '%')
             AND im.is_absent = FALSE
-            GROUP BY sub.subject_name
-            ORDER BY sub.subject_name
+            GROUP BY sub.subject_name, e.exam_name
+            ORDER BY e.exam_name, sub.subject_name
         `, [studentId, student.academic_year]);
         console.log(`Marks data fetched: ${marksData.length} subjects`);
 
@@ -327,17 +329,19 @@ router.post('/send-whatsapp-update', authenticateToken, async (req, res) => {
         const marksData = await query(`
             SELECT 
                 sub.subject_name,
+                e.exam_name,
                 AVG(im.marks_obtained) as average_marks,
                 MAX(im.marks_obtained) as highest_marks,
                 MIN(im.marks_obtained) as lowest_marks
             FROM internal_marks im
             JOIN class_subjects cs ON im.class_subject_id = cs.id 
             JOIN subjects sub ON cs.subject_id = sub.id
+            JOIN exam_types e ON im.exam_type_id = e.id
             WHERE im.student_id = $1
             AND (im.academic_year = $2 OR im.academic_year LIKE $2 || '%')
             AND im.is_absent = FALSE
-            GROUP BY sub.subject_name
-            ORDER BY sub.subject_name
+            GROUP BY sub.subject_name, e.exam_name
+            ORDER BY e.exam_name, sub.subject_name
         `, [studentId, student.academic_year]);
 
         // Get overall grade and subject-wise grades
@@ -423,10 +427,21 @@ router.post('/send-whatsapp-update', authenticateToken, async (req, res) => {
             });
             message += `\n`;
         } else if (completeData.marks && completeData.marks.length > 0) {
-            message += `📝 *Subject-wise Average Marks:*\n`;
-            completeData.marks.forEach(mark => {
-                message += `  • ${mark.subject_name}: ${mark.average_marks.toFixed(1)}/100\n`;
-            });
+            // Group marks by exam type
+            const marksByExam = completeData.marks.reduce((acc, mark) => {
+                const examName = mark.exam_name || 'Internal';
+                if (!acc[examName]) acc[examName] = [];
+                acc[examName].push(mark);
+                return acc;
+            }, {});
+
+            message += `📝 *Subject-wise Marks (Exam-wise):*\n`;
+            for (const [examName, examMarks] of Object.entries(marksByExam)) {
+                message += `*${examName}:*\n`;
+                examMarks.forEach(mark => {
+                    message += `  • ${mark.subject_name}: ${mark.average_marks.toFixed(1)}/100\n`;
+                });
+            }
             message += `\n`;
         } else {
             message += `📝 *Subject-wise Marks & Grades:*\n`;

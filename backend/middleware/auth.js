@@ -26,7 +26,7 @@ const authenticateToken = async (req, res, next) => {
 
             // Fetch user details from database
             const users = await query(
-                `SELECT u.id, u.username, u.email, u.full_name, u.phone, u.is_active, 
+                `SELECT u.id, u.username, u.email, u.full_name, u.phone, u.is_active, u.department_id,
                 r.role_name 
          FROM users u 
          JOIN roles r ON u.role_id = r.id 
@@ -56,7 +56,8 @@ const authenticateToken = async (req, res, next) => {
                 email: users[0].email,
                 fullName: users[0].full_name,
                 phone: users[0].phone,
-                role: users[0].role_name
+                role: users[0].role_name,
+                departmentId: users[0].department_id
             };
 
             console.log(`Auth Debug: User ${req.user.username} authenticated with role ${req.user.role}`);

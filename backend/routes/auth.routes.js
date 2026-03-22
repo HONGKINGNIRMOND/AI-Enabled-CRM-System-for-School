@@ -14,7 +14,7 @@ router.post('/login', validate(schemas.login), async (req, res) => {
         // Find user by email
         const users = await query(
             `SELECT u.id, u.username, u.email, u.password_hash, u.full_name, 
-              u.phone, u.is_active, r.role_name 
+              u.phone, u.is_active, u.department_id, r.role_name 
        FROM users u 
        JOIN roles r ON u.role_id = r.id 
        WHERE u.email = $1`,
@@ -73,7 +73,8 @@ router.post('/login', validate(schemas.login), async (req, res) => {
                     email: user.email,
                     fullName: user.full_name,
                     phone: user.phone,
-                    role: user.role_name
+                    role: user.role_name,
+                    departmentId: user.department_id
                 },
                 accessToken,
                 refreshToken

@@ -1,0 +1,34 @@
+# Database Tables and Views
+
+The following tables and views are present in the `school_crm` PostgreSQL database:
+
+## Tables
+- `attendance`
+- `attendance_summary`
+- `audit_log`
+- `class_fee_structure`
+- `class_subjects`
+- `classes`
+- `departments`
+- `exam_types`
+- `fees`
+- `grading_rules`
+- `internal_marks`
+- `leads`
+- `notification_preferences`
+- `notification_types`
+- `notifications`
+- `parents`
+- `roles`
+- `sections`
+- `student_enrollments`
+- `student_grades`
+- `student_parents`
+- `students`
+- `subjects`
+- `system_settings`
+- `users`
+
+## Views
+- `v_current_students`
+- `v_student_attendance_summary`

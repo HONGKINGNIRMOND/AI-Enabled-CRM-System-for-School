@@ -53,9 +53,28 @@ VALUES (
         'System Administrator with full access'
     ),
     (
+        'hod',
+        'Head of Department'
+    ),
+    (
         'teacher',
         'Teacher with access to assigned classes'
     );
+
+-- Departments Table
+CREATE TABLE departments (
+    id SERIAL PRIMARY KEY,
+    department_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    hod_id INT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_departments_modtime
+    BEFORE UPDATE ON departments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Users Table
 CREATE TABLE users (
@@ -64,22 +83,27 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role_id INT NOT NULL,
+    department_id INT,
     full_name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
     is_active BOOLEAN DEFAULT TRUE,
     last_login TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE RESTRICT
+    FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE RESTRICT,
+    FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL
 );
 
 CREATE TRIGGER update_users_modtime
     BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+ALTER TABLE departments ADD CONSTRAINT fk_departments_hod FOREIGN KEY (hod_id) REFERENCES users (id) ON DELETE SET NULL;
+
 CREATE INDEX idx_users_email ON users (email);
 CREATE INDEX idx_users_username ON users (username);
 CREATE INDEX idx_users_role ON users (role_id);
+CREATE INDEX idx_users_department ON users (department_id);
 
 -- ============================================
 -- ACADEMIC STRUCTURE TABLES
@@ -129,10 +153,12 @@ CREATE TABLE subjects (
     id SERIAL PRIMARY KEY,
     subject_name VARCHAR(100) NOT NULL UNIQUE,
     subject_code VARCHAR(20) UNIQUE,
+    department_id INT,
     description TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL
 );
 
 CREATE TRIGGER update_subjects_modtime
@@ -140,6 +166,7 @@ CREATE TRIGGER update_subjects_modtime
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX idx_subjects_code ON subjects (subject_code);
+CREATE INDEX idx_subjects_department ON subjects (department_id);
 
 -- Class-Subject Mapping
 CREATE TABLE class_subjects (

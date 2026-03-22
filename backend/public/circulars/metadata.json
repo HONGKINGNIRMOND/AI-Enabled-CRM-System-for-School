@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "id": "1773812273927",
+    "title": "stafff meeting",
+    "message": "bms at 2 clock today",
+    "targetRoles": [
+      "teacher"
+    ],
+    "targetDepartments": [],
+    "targetSubjects": [],
+    "targetUsers": [],
+    "scheduledDate": null,
+    "createdBy": "School Administrator",
+    "creatorId": 10,
+    "creatorRole": "admin",
+    "createdAt": "2026-03-18T05:37:53.927Z",
+    "attachments": [
+      {
+        "fileName": "1773812273914_paper.pdf",
+        "originalName": "paper.pdf",
+        "mimeType": "application/pdf",
+        "size": 253868
+      }
+    ]
+  }
+]

@@ -123,7 +123,8 @@ export const masterAPI = {
     getSections: (classId) => api.get('/master/sections', { params: classId ? { class_id: classId } : {} }),
     getSubjects: (classId) => api.get('/master/subjects', { params: classId ? { class_id: classId } : {} }),
     getExamTypes: () => api.get('/master/exam-types'),
-    getAcademicYears: () => api.get('/master/academic-years')
+    getAcademicYears: () => api.get('/master/academic-years'),
+    getDepartments: () => api.get('/master/departments')
 };
 
 // Teachers API
@@ -181,13 +182,19 @@ export const feesAPI = {
 // Circulars API (e-circulars from admin to teachers)
 export const circularsAPI = {
     list: () => api.get('/circulars'),
-    create: ({ title, message, audience = 'teachers', files }) => {
+    create: (data) => {
         const formData = new FormData();
-        formData.append('title', title);
-        formData.append('message', message);
-        formData.append('audience', audience);
-        if (files && files.length) {
-            Array.from(files).forEach((file) => {
+        formData.append('title', data.title);
+        formData.append('message', data.message);
+        formData.append('targetRoles', JSON.stringify(data.targetRoles || []));
+        formData.append('targetDepartments', JSON.stringify(data.targetDepartments || []));
+        formData.append('targetSubjects', JSON.stringify(data.targetSubjects || []));
+        formData.append('targetUsers', JSON.stringify(data.targetUsers || []));
+        if (data.scheduledDate) {
+            formData.append('scheduledDate', data.scheduledDate);
+        }
+        if (data.files && data.files.length) {
+            Array.from(data.files).forEach((file) => {
                 formData.append('files', file);
             });
         }
@@ -195,7 +202,8 @@ export const circularsAPI = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
     },
-    delete: (id) => api.delete(`/circulars/${id}`)
+    delete: (id) => api.delete(`/circulars/${id}`),
+    previewRecipients: (data) => api.post('/circulars/preview-recipients', data)
 };
 
 // AI API
@@ -203,6 +211,25 @@ export const aiAPI = {
     getAttendancePredictions: () => api.get('/ai/attendance-predictions'),
     getPerformanceAnalysis: (studentId) => api.get(`/ai/performance-analysis/${studentId}`),
     getOverallInsights: () => api.get('/ai/insights')
+};
+
+// Admin HOD Management API
+export const adminHodAPI = {
+    getAll: () => api.get('/admin/hod'),
+    create: (data) => api.post('/admin/hod', data),
+    update: (id, data) => api.put(`/admin/hod/${id}`, data),
+    delete: (id) => api.delete(`/admin/hod/${id}`),
+    getDepartments: () => api.get('/admin/hod/departments'),
+    createDepartment: (data) => api.post('/admin/hod/departments', data)
+};
+
+// HOD Panel API
+export const hodAPI = {
+    getDashboard: () => api.get('/hod/dashboard'),
+    getSubjects: () => api.get('/hod/subjects'),
+    getAttendance: () => api.get('/hod/attendance'),
+    getMarks: () => api.get('/hod/marks'),
+    approveMarks: (data) => api.post('/hod/approve-marks', data)
 };
 
 export default api;

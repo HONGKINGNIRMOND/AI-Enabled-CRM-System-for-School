@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { studentsAPI } from '../../services/api';
-import { Search, Plus, Upload, ArrowLeft, Trash2, Ban, CheckCircle, ArrowUpDown } from 'lucide-react';
+import { studentsAPI, masterAPI } from '../../services/api';
+import { Search, Plus, Upload, ArrowLeft, Trash2, Ban, CheckCircle, ArrowUpDown, MessageSquare, Send } from 'lucide-react';
 import BulkUploadModal from '../common/BulkUploadModal';
 import StudentFormModal from './StudentFormModal';
 
@@ -12,19 +12,61 @@ const StudentList = () => {
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('roll_number');
     const [sortOrder, setSortOrder] = useState('asc');
+    const [filterClass, setFilterClass] = useState('');
+    const [filterSection, setFilterSection] = useState('');
+    const [classes, setClasses] = useState([]);
+    const [sections, setSections] = useState([]);
     const [showStudentModal, setShowStudentModal] = useState(false);
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [selectedIds, setSelectedIds] = useState([]);
 
     useEffect(() => {
+        fetchClasses();
+    }, []);
+
+    useEffect(() => {
+        if (filterClass) {
+            fetchSections(filterClass);
+        } else {
+            setSections([]);
+            setFilterSection('');
+        }
+    }, [filterClass]);
+
+    useEffect(() => {
         fetchStudents();
-    }, [search, sortBy, sortOrder]);
+    }, [search, sortBy, sortOrder, filterClass, filterSection]);
+
+    const fetchClasses = async () => {
+        try {
+            const response = await masterAPI.getClasses();
+            setClasses(response.data.data || []);
+        } catch (error) {
+            console.error('Failed to fetch classes:', error);
+        }
+    };
+
+    const fetchSections = async (classId) => {
+        try {
+            const response = await masterAPI.getSections(classId);
+            setSections(response.data.data || []);
+        } catch (error) {
+            console.error('Failed to fetch sections:', error);
+        }
+    };
 
     const fetchStudents = async () => {
         try {
             setLoading(true);
-            const response = await studentsAPI.getAll({ search, page: 1, limit: 20 });
+            const params = {
+                search,
+                page: 1,
+                limit: 100,
+                ...(filterClass && { class_id: filterClass }),
+                ...(filterSection && { section_id: filterSection })
+            };
+            const response = await studentsAPI.getAll(params);
             let studentsList = response.data.data.students;
 
             // Client-side sorting
@@ -121,6 +163,15 @@ const StudentList = () => {
         );
     };
 
+    const handleBulkWhatsApp = () => {
+        if (selectedIds.length === 0) return;
+        navigate(`/quick-action?studentIds=${selectedIds.join(',')}`);
+    };
+
+    const handleSingleWhatsApp = (studentId) => {
+        navigate(`/quick-action?studentId=${studentId}`);
+    };
+
     const toggleSelectAll = () => {
         if (selectedIds.length === students.length) {
             setSelectedIds([]);
@@ -158,13 +209,22 @@ const StudentList = () => {
                         </div>
                         <div className="flex gap-2">
                             {selectedIds.length > 0 && (
-                                <button
-                                    onClick={handleBulkDelete}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete Selected ({selectedIds.length})
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleBulkWhatsApp}
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+                                    >
+                                        <Send className="w-4 h-4" />
+                                        WhatsApp Selected ({selectedIds.length})
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete Selected ({selectedIds.length})
+                                    </button>
+                                </div>
                             )}
                             <button
                                 onClick={() => setShowBulkModal(true)}
@@ -201,7 +261,28 @@ const StudentList = () => {
                                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
+                            <select
+                                value={filterClass}
+                                onChange={(e) => setFilterClass(e.target.value)}
+                                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[120px]"
+                            >
+                                <option value="">All Classes</option>
+                                {classes.map(c => (
+                                    <option key={c.id} value={c.id}>{c.class_name}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={filterSection}
+                                onChange={(e) => setFilterSection(e.target.value)}
+                                disabled={!filterClass}
+                                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[120px] disabled:bg-gray-100 disabled:text-gray-400"
+                            >
+                                <option value="">All Sections</option>
+                                {sections.map(s => (
+                                    <option key={s.id} value={s.id}>{s.section_name}</option>
+                                ))}
+                            </select>
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
@@ -327,6 +408,13 @@ const StudentList = () => {
                                                     title="Delete Student"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleSingleWhatsApp(student.id)}
+                                                    className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
+                                                    title="Send WhatsApp Update"
+                                                >
+                                                    <Send className="w-4 h-4" />
                                                 </button>
                                             </td>
                                         </tr>

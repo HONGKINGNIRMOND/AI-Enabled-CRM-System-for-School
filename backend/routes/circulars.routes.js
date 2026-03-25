@@ -39,10 +39,12 @@ const upload = multer({
             'application/pdf',
             'application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'text/csv'
         ];
         if (!allowed.includes(file.mimetype)) {
-            return cb(new Error('Only PDF, Excel and CSV files are allowed'));
+            return cb(new Error('Only PDF, Excel, Word and CSV files are allowed'));
         }
         cb(null, true);
     }
@@ -74,7 +76,7 @@ const writeMetadata = (data) => {
 router.use(authenticateToken);
 
 // Create a new e-circular
-router.post('/', upload.array('files', 5), (req, res) => {
+router.post('/', upload.array('files', 10), (req, res) => {
     try {
         if (!['admin', 'hod'].includes(req.user.role)) {
             return res.status(403).json({

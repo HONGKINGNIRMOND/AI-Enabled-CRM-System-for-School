@@ -8,7 +8,7 @@ const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'root',
   database: process.env.DB_NAME || 'school_crm',
-  max: 20, // max number of clients in the pool
+  max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX) : 100, // max number of clients in the pool
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });

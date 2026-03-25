@@ -1,5 +1,67 @@
 [
   {
+    "id": "1774438839139",
+    "title": "files",
+    "message": "show",
+    "targetRoles": [
+      "teacher",
+      "hod"
+    ],
+    "targetDepartments": [],
+    "targetSubjects": [],
+    "targetUsers": [],
+    "scheduledDate": null,
+    "createdBy": "School Administrator",
+    "creatorId": 10,
+    "creatorRole": "admin",
+    "createdAt": "2026-03-25T11:40:39.139Z",
+    "attachments": [
+      {
+        "fileName": "1774438838933_Circular_1774438026503.docx",
+        "originalName": "Circular_1774438026503.docx",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "size": 8620
+      },
+      {
+        "fileName": "1774438838934_ds.pdf",
+        "originalName": "ds.pdf",
+        "mimeType": "application/pdf",
+        "size": 39302923
+      },
+      {
+        "fileName": "1774438839136_E-commerce.csv",
+        "originalName": "E-commerce.csv",
+        "mimeType": "text/csv",
+        "size": 18141
+      }
+    ]
+  },
+  {
+    "id": "1774438026503",
+    "title": "demo send",
+    "message": "this is demo message",
+    "targetRoles": [
+      "teacher",
+      "hod"
+    ],
+    "targetDepartments": [],
+    "targetSubjects": [],
+    "targetUsers": [],
+    "scheduledDate": null,
+    "createdBy": "School Administrator",
+    "creatorId": 10,
+    "creatorRole": "admin",
+    "createdAt": "2026-03-25T11:27:06.503Z",
+    "attachments": [
+      {
+        "fileName": "1774438026490_ht.pdf",
+        "originalName": "ht.pdf",
+        "mimeType": "application/pdf",
+        "size": 500116
+      }
+    ]
+  },
+  {
     "id": "1774417892588",
     "title": "staff meeting",
     "message": "bms at 2pm",

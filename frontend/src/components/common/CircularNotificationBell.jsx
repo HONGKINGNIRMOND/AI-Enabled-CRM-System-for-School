@@ -138,7 +138,7 @@ const CircularNotificationBell = () => {
 
                     <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
                         <Link
-                            to="/circulars"
+                            to="/"
                             onClick={() => setOpen(false)}
                             className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition"
                         >

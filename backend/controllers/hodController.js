@@ -51,7 +51,7 @@ const getSubjectsAndFaculty = async (req, res) => {
             SELECT 
                 s.id as "subjectId",
                 s.subject_name as "subjectName",
-                s.subject_code as "subjectCode",
+                d.department_name as "departmentName",
                 u.id as "teacherId",
                 u.full_name as "teacherName",
                 c.class_name as "className"
@@ -59,6 +59,7 @@ const getSubjectsAndFaculty = async (req, res) => {
             LEFT JOIN class_subjects cs ON s.id = cs.subject_id
             LEFT JOIN users u ON cs.teacher_id = u.id
             LEFT JOIN classes c ON cs.class_id = c.id
+            LEFT JOIN departments d ON s.department_id = d.id
             WHERE s.department_id = $1
             ORDER BY s.subject_name
         `, [departmentId]);

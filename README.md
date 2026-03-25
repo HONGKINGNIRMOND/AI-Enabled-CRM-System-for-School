@@ -2,10 +2,12 @@
 
 A comprehensive School Management CRM System designed to streamline academic and administrative operations. This platform enables administrators and teachers to effectively manage and track student performance, attendance, and communication.
 
-- **Quick Action CRM**: Streamlined student performance tracking, filtering, and rapid updates.
+- **Quick Action CRM**: Streamlined student performance tracking, rapid updates, and bulk WhatsApp messaging integration.
 - **Omnichannel Communication**: Integrated alerts via Email, SMS, WhatsApp, and Voice calls.
-- **Circulars Broadcasting**: System-wide announcements with document attachments.
+- **Circulars Broadcasting**: System-wide announcements with file attachments (PDF, Excel, Word docs up to 50MB).
+- **HOD Analytics Dashboard**: Comprehensive academic insights, pass rates, and performance distribution for Head of Departments.
 - **Bulk Data Management**: Support for high-speed student and data uploads via CSV/Excel.
+- **High-Performance Architecture**: Optimized with compression, connection pooling, and PM2 clustering to handle 500+ concurrent requests.
 - **AI-Powered Analytics**: Performance prediction and audio processing via Whisper.
 - **Secure Authentication**: Role-based access control with JWT-secured endpoints.
 
@@ -13,9 +15,10 @@ A comprehensive School Management CRM System designed to streamline academic and
 
 ### Backend
 - **Core**: Node.js, Express.js
-- **Database**: PostgreSQL with Sequelize ORM
+- **Database**: PostgreSQL with Sequelize ORM (Connection Pooling Enabled)
 - **Authentication**: JWT, bcryptjs
 - **Notifications**: Nodemailer (Email), Twilio (SMS, WhatsApp, Voice/Telephony)
+- **Performance & Security**: PM2 (Clustering), Helmet, Compression, express-rate-limit
 - **AI Analytics**: OpenAI/Whisper for transcription and insights
 - **Utilities**: Winston (Logging), Joi (Validation), Multer (File Uploads)
 
@@ -103,11 +106,23 @@ A comprehensive School Management CRM System designed to streamline academic and
 ## Running the Project
 
 ### Start Backend
+
+#### Development Mode
 From the `backend` directory:
 ```bash
 npm run dev
 ```
 The API server will start at `http://localhost:3001`.
+
+#### Production Mode (Clustered)
+To run the backend utilizing all CPU cores for high concurrency (500+ requests):
+```bash
+npx pm2 start ecosystem.config.js
+```
+To monitor the cluster:
+```bash
+npx pm2 monit
+```
 
 ### Start Frontend
 From the `frontend` directory:

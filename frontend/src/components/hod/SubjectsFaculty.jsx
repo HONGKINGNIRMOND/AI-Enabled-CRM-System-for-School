@@ -71,7 +71,7 @@ const SubjectsFaculty = () => {
                             <thead className="bg-gray-50/80 border-b border-gray-100">
                                 <tr>
                                     <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Subject Name</th>
-                                    <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Subject Code</th>
+                                    <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Handling Department</th>
                                     <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Class</th>
                                     <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Assigned Faculty</th>
                                 </tr>
@@ -86,8 +86,8 @@ const SubjectsFaculty = () => {
                                         <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
                                             <td className="py-4 px-6 font-bold text-gray-900">{item.subjectName}</td>
                                             <td className="py-4 px-6">
-                                                <span className="px-3 py-1 bg-gray-100 text-gray-600 font-mono text-xs rounded-lg">
-                                                    {item.subjectCode || 'N/A'}
+                                                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 font-medium text-xs rounded-lg whitespace-nowrap border border-indigo-100">
+                                                    {item.departmentName || 'N/A'}
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6">

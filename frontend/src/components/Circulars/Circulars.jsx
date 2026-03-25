@@ -303,12 +303,12 @@ const Circulars = () => {
                             <input
                                 type="file"
                                 multiple
-                                accept=".pdf,.xls,.xlsx,.csv"
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
                                 onChange={(e) => setFiles(e.target.files)}
                                 className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
                             />
                             <p className="mt-1 text-xs text-gray-500">
-                                Allowed types: PDF, Excel (.xls, .xlsx), CSV. Max 5 files, 10MB each.
+                                Allowed types: PDF, Word (.doc, .docx), Excel (.xls, .xlsx), CSV. Max 10 files, 50MB each.
                             </p>
                         </div>
                         <div className="flex justify-end">

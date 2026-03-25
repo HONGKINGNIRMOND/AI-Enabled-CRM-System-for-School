@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
     FileText, Search, Paperclip, RotateCcw, Trash2, Loader2,
     Bell, Star, SlidersHorizontal, X, ChevronLeft, ChevronRight,
-    ChevronsLeft, ChevronsRight, Eye
+    ChevronsLeft, ChevronsRight, Eye, FileSpreadsheet, File
 } from 'lucide-react';
 
 // ─── localStorage read-tracking helpers (shared with NotificationBell) ─────────
@@ -274,7 +274,7 @@ const RecentCircularsPanel = ({ circulars, loading, user, onDelete, onRefresh })
                                         {(user?.role === 'admin' || circular.creatorId === user?.id) && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onDelete(circular.id); }}
-                                                className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition shrink-0 opacity-0 group-hover:opacity-100">
+                                                className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         )}
@@ -282,14 +282,46 @@ const RecentCircularsPanel = ({ circulars, loading, user, onDelete, onRefresh })
 
                                     {circular.attachments?.length > 0 && (
                                         <div className="mt-3 flex flex-wrap gap-2">
-                                            {circular.attachments.map((file) => (
-                                                <a key={file.fileName} href={file.url} target="_blank" rel="noopener noreferrer"
-                                                    onClick={e => e.stopPropagation()}
-                                                    className="inline-flex items-center gap-1 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs text-indigo-700 hover:bg-indigo-100">
-                                                    <Paperclip className="w-3 h-3" />
-                                                    <span className="truncate max-w-[180px]">{file.originalName}</span>
-                                                </a>
-                                            ))}
+                                            {circular.attachments.map((file) => {
+                                                const isExcel = file.mimeType?.includes('excel') || file.mimeType?.includes('spreadsheetml') || file.fileName?.endsWith('.xlsx') || file.fileName?.endsWith('.xls');
+                                                const isPDF = file.mimeType?.includes('pdf') || file.fileName?.endsWith('.pdf');
+                                                const isWord = file.mimeType?.includes('word') || file.mimeType?.includes('officedocument.wordprocessingml') || file.fileName?.endsWith('.docx') || file.fileName?.endsWith('.doc');
+
+                                                let icon = <Paperclip className="w-3 h-3" />;
+                                                let bgColor = 'bg-gray-50';
+                                                let borderColor = 'border-gray-100';
+                                                let textColor = 'text-gray-700';
+                                                let hoverColor = 'hover:bg-gray-100';
+
+                                                if (isExcel) {
+                                                    icon = <FileSpreadsheet className="w-3 h-3" />;
+                                                    bgColor = 'bg-emerald-50';
+                                                    borderColor = 'border-emerald-100';
+                                                    textColor = 'text-emerald-700';
+                                                    hoverColor = 'hover:bg-emerald-100';
+                                                } else if (isPDF) {
+                                                    icon = <File className="w-3 h-3" />;
+                                                    bgColor = 'bg-red-50';
+                                                    borderColor = 'border-red-100';
+                                                    textColor = 'text-red-700';
+                                                    hoverColor = 'hover:bg-red-100';
+                                                } else if (isWord) {
+                                                    icon = <FileText className="w-3 h-3" />;
+                                                    bgColor = 'bg-blue-50';
+                                                    borderColor = 'border-blue-100';
+                                                    textColor = 'text-blue-700';
+                                                    hoverColor = 'hover:bg-blue-100';
+                                                }
+
+                                                return (
+                                                    <a key={file.fileName} href={file.url} target="_blank" rel="noopener noreferrer"
+                                                        onClick={e => e.stopPropagation()}
+                                                        className={`inline-flex items-center gap-1.5 rounded-full border ${borderColor} ${bgColor} px-3 py-1 text-[11px] font-medium ${textColor} ${hoverColor} transition-colors shadow-sm`}>
+                                                        {icon}
+                                                        <span className="truncate max-w-[180px]">{file.originalName}</span>
+                                                    </a>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

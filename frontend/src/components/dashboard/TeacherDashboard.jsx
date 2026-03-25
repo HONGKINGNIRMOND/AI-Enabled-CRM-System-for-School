@@ -2,6 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import DateTimeDisplay from '../common/DateTimeDisplay';
+import CircularNotificationBell from '../common/CircularNotificationBell';
+import DashboardCircularsPanel from '../common/DashboardCircularsPanel';
 import { Calendar, BookOpen, Users, LogOut } from 'lucide-react';
 
 const TeacherDashboard = () => {
@@ -18,6 +20,7 @@ const TeacherDashboard = () => {
                         </div>
                         <div className="flex items-center gap-4">
                             <DateTimeDisplay />
+                            <CircularNotificationBell />
                             <button
                                 onClick={logout}
                                 className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
@@ -58,14 +61,7 @@ const TeacherDashboard = () => {
                         <h3 className="text-xl font-bold text-gray-800">Enter Marks</h3>
                         <p className="text-gray-600 mt-2">Record student exam marks</p>
                     </Link>
-                    <Link
-                        to="/circulars"
-                        className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
-                    >
-                        <Calendar className="w-12 h-12 text-indigo-600 mb-4" />
-                        <h3 className="text-xl font-bold text-gray-800">E-Circulars</h3>
-                        <p className="text-gray-600 mt-2">View circulars and attachments from admin</p>
-                    </Link>
+
 
                     <Link
                         to="/quick-action"
@@ -80,6 +76,10 @@ const TeacherDashboard = () => {
                 <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
                     <h2 className="text-xl font-bold text-gray-800 mb-4">Today's Schedule</h2>
                     <p className="text-gray-600">No classes scheduled for today.</p>
+                </div>
+
+                <div className="mt-8">
+                    <DashboardCircularsPanel />
                 </div>
             </main>
         </div>

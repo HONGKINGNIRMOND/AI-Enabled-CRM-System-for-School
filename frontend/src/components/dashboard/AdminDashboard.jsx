@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { reportsAPI, studentsAPI, attendanceAPI, feesAPI, masterAPI } from '../../services/api';
 import DateTimeDisplay from '../common/DateTimeDisplay';
+import CircularNotificationBell from '../common/CircularNotificationBell';
+import DashboardCircularsPanel from '../common/DashboardCircularsPanel';
 import {
     Users,
     UserCheck,
@@ -209,6 +211,7 @@ const AdminDashboard = () => {
                             </select>
 
                             <DateTimeDisplay className="hidden lg:flex" />
+                            <CircularNotificationBell />
 
                             <div className="flex items-center gap-2 border-l pl-3 border-gray-200">
                                 <div className="hidden xs:block text-right">
@@ -460,6 +463,11 @@ const AdminDashboard = () => {
                                 <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600"><Send className="w-5 h-5" /></div>
                                 <span className="font-medium text-gray-700">E-Circulars (Teachers)</span>
                             </Link>
+                        </div>
+
+                        {/* Recent Circulars Dashboard Panel */}
+                        <div className="mt-8">
+                            <DashboardCircularsPanel />
                         </div>
                     </>
                 )}

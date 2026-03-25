@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { hodAPI } from '../../services/api';
 import DateTimeDisplay from '../common/DateTimeDisplay';
+import CircularNotificationBell from '../common/CircularNotificationBell';
+import DashboardCircularsPanel from '../common/DashboardCircularsPanel';
 import { 
     Users, 
     BookOpen, 
@@ -64,6 +66,7 @@ const HODDashboard = () => {
                         </div>
                         <div className="flex items-center gap-4">
                             <DateTimeDisplay className="hidden md:flex" />
+                            <CircularNotificationBell />
                             <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
                                 <div className="text-right hidden sm:block">
                                     <p className="text-sm font-bold text-gray-900">{user?.fullName}</p>
@@ -227,6 +230,11 @@ const HODDashboard = () => {
                                 <h3 className="font-bold text-gray-900">E-Circulars</h3>
                                 <p className="text-sm text-gray-500 mt-2">Manage notices & circulars</p>
                             </Link>
+                        </div>
+
+                        {/* Recent Circulars Dashboard Panel */}
+                        <div className="mt-8">
+                            <DashboardCircularsPanel />
                         </div>
                     </>
                 )}

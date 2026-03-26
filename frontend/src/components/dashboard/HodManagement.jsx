@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminHodAPI } from '../../services/api';
-import { Users, Building2, Plus, Trash2, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { sharedRecordSchema } from '../../utils/recordSchema';
+import { Users, Building2, Plus, Trash2, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Eye, EyeOff, MapPin, Calendar } from 'lucide-react';
 
 const HodManagement = () => {
     const navigate = useNavigate();
@@ -25,7 +26,14 @@ const HodManagement = () => {
         password: '',
         fullName: '',
         phone: '',
-        departmentId: ''
+        departmentId: '',
+        gender: 'Male',
+        dateOfBirth: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+        joiningDate: new Date().toISOString().slice(0, 10)
     });
 
     const [newDeptName, setNewDeptName] = useState('');
@@ -68,7 +76,11 @@ const HodManagement = () => {
             setShowCreateModal(false);
             setIsEditing(false);
             setEditingId(null);
-            setNewHod({ username: '', email: '', password: '', fullName: '', phone: '', departmentId: '' });
+            setNewHod({ 
+                username: '', email: '', password: '', fullName: '', phone: '', departmentId: '',
+                gender: 'Male', dateOfBirth: '', address: '', city: '', state: '', 
+                pincode: '', joiningDate: new Date().toISOString().slice(0, 10)
+            });
             fetchData();
             setTimeout(() => setSuccess(null), 3000);
         } catch (err) {
@@ -86,7 +98,14 @@ const HodManagement = () => {
             password: '', 
             fullName: hod.fullName || '',
             phone: hod.phone || '',
-            departmentId: hod.departmentId || ''
+            departmentId: hod.departmentId || '',
+            gender: hod.gender || 'Male',
+            dateOfBirth: hod.dateOfBirth ? new Date(hod.dateOfBirth).toISOString().slice(0, 10) : '',
+            address: hod.address || '',
+            city: hod.city || '',
+            state: hod.state || '',
+            pincode: hod.pincode || '',
+            joiningDate: hod.joiningDate ? new Date(hod.joiningDate).toISOString().slice(0, 10) : ''
         });
         setEditingId(hod.id);
         setIsEditing(true);
@@ -168,7 +187,11 @@ const HodManagement = () => {
                     <button
                         onClick={() => {
                             setIsEditing(false);
-                            setNewHod({ username: '', email: '', password: '', fullName: '', phone: '', departmentId: '' });
+                            setNewHod({ 
+                                username: '', email: '', password: '', fullName: '', phone: '', departmentId: '',
+                                gender: 'Male', dateOfBirth: '', address: '', city: '', state: '', 
+                                pincode: '', joiningDate: new Date().toISOString().slice(0, 16)
+                            });
                             setShowCreateModal(true);
                         }}
                         className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
@@ -281,7 +304,7 @@ const HodManagement = () => {
             {/* Create HOD Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
                         <div className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700">
                             <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                 <Users className="w-6 h-6" />
@@ -347,15 +370,100 @@ const HodManagement = () => {
                                     </button>
                                 </div>
                             </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Gender</label>
+                                    <select
+                                        value={newHod.gender}
+                                        onChange={(e) => setNewHod({ ...newHod, gender: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                                    >
+                                        {sharedRecordSchema['Gender'].options.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Phone</label>
+                                    <input
+                                        type="text"
+                                        value={newHod.phone}
+                                        onChange={(e) => setNewHod({ ...newHod, phone: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                        placeholder="+1 234 567 890"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Date of Birth</label>
+                                    <input
+                                        type="date"
+                                        value={newHod.dateOfBirth}
+                                        onChange={(e) => setNewHod({ ...newHod, dateOfBirth: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Joining Date</label>
+                                    <input
+                                        type="date"
+                                        value={newHod.joiningDate}
+                                        onChange={(e) => setNewHod({ ...newHod, joiningDate: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Phone</label>
-                                <input
-                                    type="text"
-                                    value={newHod.phone}
-                                    onChange={(e) => setNewHod({ ...newHod, phone: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
-                                    placeholder="+1 234 567 890"
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Address</label>
+                                <textarea
+                                    value={newHod.address}
+                                    onChange={(e) => setNewHod({ ...newHod, address: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all resize-none"
+                                    placeholder="Street Address"
+                                    rows="2"
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">City</label>
+                                    <select
+                                        value={newHod.city}
+                                        onChange={(e) => setNewHod({ ...newHod, city: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                                    >
+                                        <option value="">Select City</option>
+                                        {sharedRecordSchema['City'].options.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">State</label>
+                                    <select
+                                        value={newHod.state}
+                                        onChange={(e) => setNewHod({ ...newHod, state: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                                    >
+                                        <option value="">Select State</option>
+                                        {sharedRecordSchema['State'].options.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Pincode</label>
+                                    <input
+                                        type="text"
+                                        value={newHod.pincode}
+                                        onChange={(e) => setNewHod({ ...newHod, pincode: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                        placeholder="Pincode"
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-gray-500 uppercase ml-1">Department</label>

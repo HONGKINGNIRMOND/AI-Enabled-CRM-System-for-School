@@ -241,7 +241,6 @@ const AdminDashboard = () => {
                                 title="Total Students"
                                 value={stats?.totalStudents || 0}
                                 color={{ bg: 'bg-blue-50', text: 'text-blue-600' }}
-                                trend="+5% vs last month"
                             />
                             <StatCard
                                 icon={CheckCircle}

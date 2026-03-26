@@ -46,97 +46,60 @@ const detectColumnMapping = (headers) => {
     const mapping = {};
     const headerLower = headers.map(h => (h || '').toString().toLowerCase().trim());
 
-    // Common patterns for registration number
-    const regPatterns = ['registration', 'reg', 'regno', 'reg_no', 'registration_number', 'student_id', 'id'];
-    // Common patterns for name
-    const namePatterns = ['name', 'student_name', 'student name', 'full_name', 'full name'];
-    // Common patterns for class
-    const classPatterns = ['class', 'grade', 'standard', 'std'];
-    // Common patterns for section
-    const sectionPatterns = ['section', 'sec', 'division'];
-    // Common patterns for fee
-    const feePatterns = ['fee', 'total_fee', 'total fee', 'fees', 'amount'];
-    // Common patterns for paid amount
-    const paidPatterns = ['paid', 'paid_amount', 'paid amount', 'amount_paid'];
-    // Common patterns for pending
-    const pendingPatterns = ['pending', 'pending_amount', 'pending amount', 'balance', 'due'];
+    // Mapping patterns
+    const patterns = {
+        registrationNumber: ['registration', 'reg', 'regno', 'reg_no', 'registration_number', 'student_id', 'id'],
+        name: ['name', 'student_name', 'student name', 'full_name', 'full name', 'student_name'],
+        class: ['class', 'grade', 'standard', 'std'],
+        section: ['section', 'sec', 'division'],
+        gender: ['gender', 'sex'],
+        dateOfBirth: ['birth', 'dob', 'date of birth', 'date_of_birth'],
+        admissionDate: ['admission', 'join', 'date of admission', 'admission_date'],
+        phone: ['phone', 'mobile', 'contact', 'student_phone', 'student phone'],
+        email: ['email', 'mail', 'student_email', 'student email'],
+        address: ['address', 'residence', 'location'],
+        city: ['city', 'town'],
+        state: ['state', 'province', 'region'],
+        pincode: ['pincode', 'zip', 'zipcode', 'postal'],
+        bloodGroup: ['blood', 'group', 'blood_group', 'blood group'],
+        
+        // Parent patterns
+        fatherName: ['father name', 'father_name', 'father\'s name'],
+        fatherPhone: ['father phone', 'father_phone', 'father\'s phone'],
+        fatherWhatsApp: ['father whatsapp', 'father_whatsapp', 'father\'s whatsapp'],
+        motherName: ['mother name', 'mother_name', 'mother\'s name'],
+        motherPhone: ['mother phone', 'mother_phone', 'mother\'s phone'],
+        motherWhatsApp: ['mother whatsapp', 'mother_whatsapp', 'mother\'s whatsapp'],
+        
+        // Fee patterns
+        totalFee: ['fee', 'total_fee', 'total fee', 'fees', 'amount'],
+        paidAmount: ['paid', 'paid_amount', 'paid amount', 'amount_paid'],
+        pendingAmount: ['pending', 'pending_amount', 'pending amount', 'balance', 'due']
+    };
 
-    // Find registration number
-    for (const pattern of regPatterns) {
-        const index = headerLower.findIndex(h => h.includes(pattern));
-        if (index !== -1) {
-            mapping.registrationNumber = headers[index];
-            break;
+    // Find mappings
+    for (const [key, patternList] of Object.entries(patterns)) {
+        for (const pattern of patternList) {
+            const index = headerLower.findIndex(h => h === pattern || h.includes(pattern));
+            if (index !== -1) {
+                mapping[key] = headers[index];
+                break;
+            }
         }
     }
 
-    // Find name
-    for (const pattern of namePatterns) {
-        const index = headerLower.findIndex(h => h.includes(pattern));
-        if (index !== -1) {
-            mapping.name = headers[index];
-            break;
-        }
-    }
-
-    // Find class
-    for (const pattern of classPatterns) {
-        const index = headerLower.findIndex(h => h.includes(pattern));
-        if (index !== -1) {
-            mapping.class = headers[index];
-            break;
-        }
-    }
-
-    // Find section
-    for (const pattern of sectionPatterns) {
-        const index = headerLower.findIndex(h => h.includes(pattern));
-        if (index !== -1) {
-            mapping.section = headers[index];
-            break;
-        }
-    }
-
-    // Find fee fields
-    for (const pattern of feePatterns) {
-        const index = headerLower.findIndex(h => h.includes(pattern) && !h.includes('paid') && !h.includes('pending'));
-        if (index !== -1) {
-            mapping.totalFee = headers[index];
-            break;
-        }
-    }
-
-    for (const pattern of paidPatterns) {
-        const index = headerLower.findIndex(h => h.includes(pattern));
-        if (index !== -1) {
-            mapping.paidAmount = headers[index];
-            break;
-        }
-    }
-
-    for (const pattern of pendingPatterns) {
-        const index = headerLower.findIndex(h => h.includes(pattern));
-        if (index !== -1) {
-            mapping.pendingAmount = headers[index];
-            break;
-        }
-    }
-
-    // Find subject columns (any column that looks like a subject)
+    // Find subject columns (any column that doesn't match a pattern and isn't empty)
     mapping.subjects = {};
+    const matchedHeaders = new Set(Object.values(mapping));
+    
     headers.forEach((header, index) => {
-        const h = headerLower[index];
-        // Skip known fields
-        if (!regPatterns.some(p => h.includes(p)) &&
-            !namePatterns.some(p => h.includes(p)) &&
-            !classPatterns.some(p => h.includes(p)) &&
-            !sectionPatterns.some(p => h.includes(p)) &&
-            !feePatterns.some(p => h.includes(p)) &&
-            !paidPatterns.some(p => h.includes(p)) &&
-            !pendingPatterns.some(p => h.includes(p)) &&
-            header && header.trim() !== '') {
-            // This might be a subject column
-            mapping.subjects[header] = header;
+        if (!matchedHeaders.has(header) && header && header.trim() !== '') {
+            // Verify it's not a generic field we missed
+            const h = headerLower[index];
+            const isGeneric = Object.values(patterns).flat().some(p => h.includes(p));
+            if (!isGeneric) {
+                mapping.subjects[header] = header;
+            }
         }
     });
 

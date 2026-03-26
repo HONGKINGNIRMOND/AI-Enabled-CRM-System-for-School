@@ -10,6 +10,32 @@ const path = require('path');
 const fs = require('fs');
 const csv = require('csv-parser');
 
+// Helper to handle multiple date formats (DD-MM-YYYY, YYYY-MM-DD, etc.)
+const parseDateString = (dateStr) => {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return dateStr.toISOString().split('T')[0];
+    
+    const s = dateStr.toString().trim();
+    if (!s) return null;
+
+    // Try DD-MM-YYYY or DD/MM/YYYY
+    const ddmmyyyy = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.exec(s);
+    if (ddmmyyyy) {
+        return `${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, '0')}-${ddmmyyyy[1].padStart(2, '0')}`;
+    }
+
+    // Try YYYY-MM-DD
+    const yyyymmdd = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(s);
+    if (yyyymmdd) {
+        return `${yyyymmdd[1]}-${yyyymmdd[2].padStart(2, '0')}-${yyyymmdd[3].padStart(2, '0')}`;
+    }
+
+    // Fallback to standard JS Date
+    const d = new Date(s);
+    return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : null;
+};
+
+
 const upload = multer({
     dest: 'uploads/',
     limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760 }
@@ -18,13 +44,24 @@ const upload = multer({
 // Get all teachers
 router.get('/', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
-        const teachers = await query(`
-            SELECT u.id, u.username, u.full_name, u.email, u.phone, u.is_active 
+        const { state } = req.query;
+        let sql = `
+            SELECT u.id, u.username, u.full_name, u.email, u.phone, u.is_active,
+                   u.gender, u.date_of_birth, u.address, u.city, u.state, u.pincode, u.joining_date, u.primary_subject
             FROM users u 
             JOIN roles r ON u.role_id = r.id 
             WHERE r.role_name = 'teacher'
-            ORDER BY u.full_name
-        `);
+        `;
+        const params = [];
+
+        if (state) {
+            sql += ` AND u.state = $${params.length + 1}`;
+            params.push(state);
+        }
+
+        sql += ` ORDER BY u.full_name`;
+
+        const teachers = await query(sql, params);
         res.json({ success: true, data: teachers });
     } catch (error) {
         console.error('Fetch teachers error:', error);
@@ -35,7 +72,10 @@ router.get('/', authenticateToken, authorize('admin', 'hod'), async (req, res) =
 // Create new teacher
 router.post('/', authenticateToken, authorize('admin', 'hod'), validate(schemas.user), async (req, res) => {
     try {
-        const { username, email, password, full_name, phone } = req.validatedData;
+        const { 
+            username, email, password, full_name, phone, gender, 
+            date_of_birth, address, city, state, pincode, joining_date, primary_subject 
+        } = req.validatedData;
 
         // Check if email or username exists
         const existing = await query(
@@ -63,9 +103,11 @@ router.post('/', authenticateToken, authorize('admin', 'hod'), validate(schemas.
 
         // Insert user
         await query(
-            `INSERT INTO users (username, email, password_hash, full_name, phone, role_id, is_active)
-             VALUES ($1, $2, $3, $4, $5, $6, TRUE)`,
-            [username, email, password_hash, full_name, phone, role_id]
+            `INSERT INTO users (username, email, password_hash, full_name, phone, role_id, is_active, 
+                              gender, date_of_birth, address, city, state, pincode, joining_date, primary_subject)
+             VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            [username, email, password_hash, full_name, phone, role_id, 
+             gender, date_of_birth, address, city, state, pincode, joining_date || new Date(), primary_subject]
         );
 
         res.status(201).json({
@@ -119,7 +161,15 @@ router.post('/bulk', authenticateToken, authorize('admin', 'hod'), upload.single
                                 full_name: row['Full Name'] || row['full_name'],
                                 email: row['Email'] || row['email'],
                                 phone: row['Phone'] || row['phone'] || null,
-                                password: row['Password'] || row['password']
+                                password: row['Password'] || row['password'],
+                                gender: row['Gender'] || row['gender'],
+                                date_of_birth: parseDateString(row['Date of Birth'] || row['date_of_birth']),
+                                address: row['Address'] || row['address'],
+                                city: row['City'] || row['city'],
+                                state: row['State'] || row['state'],
+                                pincode: row['Pincode'] || row['pincode'],
+                                joining_date: parseDateString(row['Joining Date'] || row['joining_date']),
+                                primary_subject: row['Primary Subject'] || row['primary_subject']
                             });
                         } catch (err) {
                             errors.push({
@@ -161,7 +211,15 @@ router.post('/bulk', authenticateToken, authorize('admin', 'hod'), upload.single
                         full_name: getVal(row, 'Full Name', 'full_name', 'fullname'),
                         email: getVal(row, 'Email', 'email'),
                         phone: getVal(row, 'Phone', 'phone', 'mobile') || null,
-                        password: getVal(row, 'Password', 'password')
+                        password: getVal(row, 'Password', 'password'),
+                        gender: getVal(row, 'Gender', 'gender'),
+                        date_of_birth: parseDateString(getVal(row, 'Date of Birth', 'dob', 'date_of_birth')),
+                        address: getVal(row, 'Address', 'address'),
+                        city: getVal(row, 'City', 'city'),
+                        state: getVal(row, 'State', 'state'),
+                        pincode: getVal(row, 'Pincode', 'pincode'),
+                        joining_date: parseDateString(getVal(row, 'Joining Date', 'joining_date')),
+                        primary_subject: getVal(row, 'Primary Subject', 'primary_subject', 'subject')
                     });
                 } catch (error) {
                     errors.push({
@@ -228,7 +286,7 @@ router.post('/bulk', authenticateToken, authorize('admin', 'hod'), upload.single
             for (const teacher of validTeachers) {
                 try {
                     await transaction(async (conn) => {
-                        const { username, email, password, full_name, phone } = teacher;
+                        const { username, email, password, full_name, phone, gender, date_of_birth, address, city, state, pincode, joining_date } = teacher;
 
                         // Check if email or username exists
                         const existing = await conn.query(
@@ -251,9 +309,11 @@ router.post('/bulk', authenticateToken, authorize('admin', 'hod'), upload.single
 
                         // Insert user
                         await conn.query(
-                            `INSERT INTO users (username, email, password_hash, full_name, phone, role_id, is_active)
-                             VALUES ($1, $2, $3, $4, $5, $6, TRUE)`,
-                            [username, email, password_hash, full_name, phone, role_id]
+                            `INSERT INTO users (username, email, password_hash, full_name, phone, role_id, is_active,
+                                              gender, date_of_birth, address, city, state, pincode, joining_date, primary_subject)
+                             VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                            [username, email, password_hash, full_name, phone, role_id,
+                             gender, date_of_birth, address, city, state, pincode, joining_date || new Date(), primary_subject]
                         );
 
                     });
@@ -489,7 +549,10 @@ router.get('/class-teachers', authenticateToken, authorize('admin', 'hod'), asyn
 router.put('/:id', authenticateToken, authorize('admin', 'hod'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { username, email, full_name, phone, password, is_active } = req.body;
+        const { 
+            username, email, full_name, phone, password, is_active,
+            gender, date_of_birth, address, city, state, pincode, joining_date, primary_subject 
+        } = req.body;
 
         // Check if teacher exists
         const teacher = await query('SELECT id FROM users WHERE id = $1', [id]);
@@ -499,9 +562,14 @@ router.put('/:id', authenticateToken, authorize('admin', 'hod'), async (req, res
 
         let updateQuery = `
             UPDATE users 
-            SET username = $1, email = $2, full_name = $3, phone = $4, is_active = $5
+            SET username = $1, email = $2, full_name = $3, phone = $4, is_active = $5,
+                gender = $6, date_of_birth = $7, address = $8, city = $9, state = $10, 
+                pincode = $11, joining_date = $12, primary_subject = $13
         `;
-        let params = [username, email, full_name, phone, is_active !== undefined ? is_active : true];
+        let params = [
+            username, email, full_name, phone, is_active !== undefined ? is_active : true,
+            gender, date_of_birth, address, city, state, pincode, joining_date, primary_subject
+        ];
 
         // If password is provided, hash it and add to update
         if (password && password.trim().length >= 6) {

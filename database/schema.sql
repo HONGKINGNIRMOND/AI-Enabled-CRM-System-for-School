@@ -85,7 +85,14 @@ CREATE TABLE users (
     role_id INT NOT NULL,
     department_id INT,
     full_name VARCHAR(255) NOT NULL,
+    gender VARCHAR(20),
+    date_of_birth TIMESTAMP,
     phone VARCHAR(20),
+    address TEXT,
+    city VARCHAR(100),
+    state VARCHAR(100),
+    pincode VARCHAR(20),
+    joining_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
     last_login TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -200,7 +207,7 @@ CREATE TABLE students (
     registration_number VARCHAR(50) NOT NULL UNIQUE,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    date_of_birth DATE NOT NULL,
+    date_of_birth TIMESTAMP NOT NULL,
     gender user_gender NOT NULL,
     blood_group VARCHAR(5),
     address TEXT,
@@ -209,7 +216,7 @@ CREATE TABLE students (
     pincode VARCHAR(10),
     phone VARCHAR(20),
     email VARCHAR(255),
-    admission_date DATE NOT NULL,
+    admission_date TIMESTAMP NOT NULL,
     photo_url VARCHAR(255),
     assigned_teacher_id INTEGER,
     is_active BOOLEAN DEFAULT TRUE,
@@ -695,3 +702,5 @@ ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;
 -- ============================================
 -- END OF SCHEMA
 -- ============================================
+-- Add primary_subject column to users table
+ALTER TABLE users ADD COLUMN primary_subject VARCHAR(100);

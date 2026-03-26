@@ -33,7 +33,7 @@ const Student = sequelize.define('Student', {
         }
     },
     dateOfBirth: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE,
         field: 'date_of_birth',
         allowNull: false
     },
@@ -71,7 +71,7 @@ const Student = sequelize.define('Student', {
         allowNull: true
     },
     admissionDate: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE,
         field: 'admission_date',
         allowNull: false
     },

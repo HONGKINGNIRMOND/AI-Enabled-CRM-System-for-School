@@ -216,7 +216,7 @@ const HODDashboard = () => {
                                 <div className="p-3 bg-orange-50 text-orange-600 rounded-xl mb-4 group-hover:bg-orange-600 group-hover:text-white transition-colors">
                                     <Send className="w-8 h-8" />
                                 </div>
-                                <h3 className="font-bold text-gray-900">Quick Action CRM</h3>
+                                <h3 className="font-bold text-gray-900">Quick Action</h3>
                                 <p className="text-sm text-gray-500 mt-2">Send bulk updates to students</p>
                             </Link>
 

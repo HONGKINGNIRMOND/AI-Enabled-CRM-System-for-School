@@ -1,6 +1,2 @@
-Username,Full Name,Email,Phone,Password
-rajesh.sharma,Rajesh Sharma,rajesh.sharma@school.com,9876543301,teacher@123
-sunita.verma,Sunita Verma,sunita.verma@school.com,9876543302,teacher@123
-vivek.patel,Vivek Patel,vivek.patel@school.com,9876543303,teacher@123
-anita.joshi,Anita Joshi,anita.joshi@school.com,9876543304,teacher@123
-mohan.das,Mohan Das,mohan.das@school.com,9876543305,teacher@123
+Username,Full Name,Email,Password,Phone,Gender,Date of Birth,Joining Date,Address,City,State,Pincode,Primary Subject
+rajesh.teacher,Rajesh Teacher,rajesh.t@school.com,password123,9876543301,Male,1985-05-20,2024-01-15,45 Teacher Colony,Pune,Maharashtra,411001,Mathematics

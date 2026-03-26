@@ -8,6 +8,32 @@ const ExcelJS = require('exceljs');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const { generateRollNumberForAcademicYear } = require('../utils/rollNumberGenerator');
+const moment = require('moment');
+
+// Helper to handle multiple date formats (DD-MM-YYYY, YYYY-MM-DD, etc.)
+const parseDateString = (dateStr) => {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return dateStr.toISOString().split('T')[0];
+    
+    const s = dateStr.toString().trim();
+    if (!s) return null;
+
+    // Try DD-MM-YYYY or DD/MM/YYYY
+    const ddmmyyyy = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.exec(s);
+    if (ddmmyyyy) {
+        return `${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, '0')}-${ddmmyyyy[1].padStart(2, '0')}`;
+    }
+
+    // Try YYYY-MM-DD
+    const yyyymmdd = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(s);
+    if (yyyymmdd) {
+        return `${yyyymmdd[1]}-${yyyymmdd[2].padStart(2, '0')}-${yyyymmdd[3].padStart(2, '0')}`;
+    }
+
+    // Fallback to standard JS Date
+    const d = new Date(s);
+    return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : null;
+};
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -41,7 +67,7 @@ const upload = multer({
 // Get all students with filters
 router.get('/', async (req, res) => {
     try {
-        const { class_id, section_id, academic_year, search, page = 1, limit = 50 } = req.query;
+        const { class_id, section_id, academic_year, search, state, page = 1, limit = 50 } = req.query;
         const offset = (page - 1) * limit;
 
         let sql = `
@@ -73,6 +99,11 @@ router.get('/', async (req, res) => {
         if (academic_year) {
             sql += ` AND se.academic_year = $${paramIndex++}`;
             params.push(academic_year);
+        }
+        
+        if (state) {
+            sql += ` AND s.state = $${paramIndex++}`;
+            params.push(state);
         }
 
         if (search) {
@@ -107,6 +138,11 @@ router.get('/', async (req, res) => {
         if (academic_year) {
             countSql += ` AND se.academic_year = $${countParamIndex++}`;
             countParams.push(academic_year);
+        }
+
+        if (state) {
+            countSql += ` AND s.state = $${countParamIndex++}`;
+            countParams.push(state);
         }
         if (search) {
             countSql += ` AND (s.first_name ILIKE $${countParamIndex} OR s.last_name ILIKE $${countParamIndex} OR se.roll_number ILIKE $${countParamIndex})`;
@@ -456,12 +492,12 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
                         registration_number: regNo,
                         first_name: normalizedRow['first name'] || normalizedRow['firstname'],
                         last_name: normalizedRow['last name'] || normalizedRow['lastname'],
-                        date_of_birth: normalizedRow['date of birth'] || normalizedRow['dob'] ? new Date(normalizedRow['date of birth'] || normalizedRow['dob']).toISOString().split('T')[0] : null,
+                        date_of_birth: parseDateString(normalizedRow['date of birth'] || normalizedRow['dob']),
                         gender: normalizedRow['gender'] || 'Male',
                         blood_group: normalizedRow['blood group'] || null,
                         phone: normalizedRow['phone'] || null,
                         email: normalizedRow['email'] || null,
-                        admission_date: normalizedRow['admission date'] || new Date().toISOString().split('T')[0],
+                        admission_date: parseDateString(normalizedRow['admission date']) || new Date().toISOString().split('T')[0],
                         class_name: normalizedRow['class'] || null,
                         section_name: normalizedRow['section'] || null,
                         academic_year: normalizedRow['academic year'] || academicYear,
@@ -519,12 +555,12 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
                         registration_number: regNo,
                         first_name: getVal(row, 'First Name', 'FirstName') || '',
                         last_name: getVal(row, 'Last Name', 'LastName') || '',
-                        date_of_birth: getVal(row, 'Date of Birth', 'DOB') ? new Date(getVal(row, 'Date of Birth', 'DOB')).toISOString().split('T')[0] : null,
+                        date_of_birth: parseDateString(getVal(row, 'Date of Birth', 'DOB')),
                         gender: getVal(row, 'Gender') || 'Male',
                         blood_group: getVal(row, 'Blood Group') || null,
                         phone: getVal(row, 'Phone') || null,
                         email: getVal(row, 'Email') || null,
-                        admission_date: getVal(row, 'Admission Date') ? new Date(getVal(row, 'Admission Date')).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                        admission_date: parseDateString(getVal(row, 'Admission Date')) || new Date().toISOString().split('T')[0],
                         class_name: getVal(row, 'Class') || null,
                         section_name: getVal(row, 'Section') || null,
                         academic_year: getVal(row, 'Academic Year') || academicYear,

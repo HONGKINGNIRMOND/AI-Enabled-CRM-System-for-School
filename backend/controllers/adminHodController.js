@@ -12,6 +12,7 @@ const getAllHods = async (req, res) => {
                 u.full_name as "fullName", 
                 u.phone, 
                 u.is_active as "isActive", 
+                u.gender, u.date_of_birth as "dateOfBirth", u.address, u.city, u.state, u.pincode, u.joining_date as "joiningDate",
                 d.id as "departmentId",
                 d.department_name as "departmentName"
             FROM users u
@@ -33,7 +34,7 @@ const getAllHods = async (req, res) => {
 
 // 2. Create a new HOD
 const createHod = async (req, res) => {
-    const { username, email, password, fullName, phone, departmentId } = req.body;
+    const { username, email, password, fullName, phone, departmentId, gender, dateOfBirth, address, city, state, pincode, joiningDate } = req.body;
 
     if (!username || !email || !password || !fullName) {
         return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -60,9 +61,11 @@ const createHod = async (req, res) => {
 
             // Insert new HOD
             const userRes = await client.query(
-                `INSERT INTO users (username, email, password_hash, role_id, department_id, full_name, phone, is_active) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
-                [username, email, passwordHash, roleId, departmentId || null, fullName, phone || null]
+                `INSERT INTO users (username, email, password_hash, role_id, department_id, full_name, phone, is_active,
+                                  gender, date_of_birth, address, city, state, pincode, joining_date) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
+                [username, email, passwordHash, roleId, departmentId || null, fullName, phone || null,
+                 gender, dateOfBirth, address, city, state, pincode, joiningDate || new Date()]
             );
 
             const newHodId = userRes[0].id;
@@ -90,7 +93,7 @@ const createHod = async (req, res) => {
 // 3. Update an HOD (and their department assignment)
 const updateHod = async (req, res) => {
     const { id } = req.params;
-    const { username, email, fullName, phone, departmentId, isActive } = req.body;
+    const { username, email, fullName, phone, departmentId, isActive, gender, dateOfBirth, address, city, state, pincode, joiningDate } = req.body;
 
     try {
         await transaction(async (client) => {
@@ -115,9 +118,17 @@ const updateHod = async (req, res) => {
                      phone = COALESCE($4, phone), 
                      department_id = $5,
                      is_active = COALESCE($6, is_active),
+                     gender = COALESCE($7, gender),
+                     date_of_birth = COALESCE($8, date_of_birth),
+                     address = COALESCE($9, address),
+                     city = COALESCE($10, city),
+                     state = COALESCE($11, state),
+                     pincode = COALESCE($12, pincode),
+                     joining_date = COALESCE($13, joining_date),
                      updated_at = NOW()
-                 WHERE id = $7`,
-                [username, email, fullName, phone, departmentId || null, isActive, id]
+                 WHERE id = $14`,
+                [username, email, fullName, phone, departmentId || null, isActive, 
+                 gender, dateOfBirth, address, city, state, pincode, joiningDate, id]
             );
 
             // Manage department's hod_id pointer:

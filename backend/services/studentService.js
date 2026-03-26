@@ -41,6 +41,19 @@ const processStudentData = async (row, columnMapping, academicYear = null) => {
     const pincode = cleanValue(row[columnMapping.pincode] || '');
     const bloodGroup = cleanValue(row[columnMapping.bloodGroup] || '');
 
+    // Parent information
+    const fatherName = cleanValue(row[columnMapping.fatherName] || '');
+    const fatherPhone = cleanValue(row[columnMapping.fatherPhone] || '');
+    const fatherWhatsapp = cleanValue(row[columnMapping.fatherWhatsApp] || '');
+    const fatherEmail = cleanValue(row[columnMapping.fatherEmail] || '');
+    const fatherOccupation = cleanValue(row[columnMapping.fatherOccupation] || '');
+    
+    const motherName = cleanValue(row[columnMapping.motherName] || '');
+    const motherPhone = cleanValue(row[columnMapping.motherPhone] || '');
+    const motherWhatsapp = cleanValue(row[columnMapping.motherWhatsApp] || '');
+    const motherEmail = cleanValue(row[columnMapping.motherEmail] || '');
+    const motherOccupation = cleanValue(row[columnMapping.motherOccupation] || '');
+
     // Validate required fields
     if (!registrationNumber || !firstName || !classValue) {
         throw new Error(`Missing required fields for row: Registration Number, Name, or Class is missing.`);
@@ -48,7 +61,7 @@ const processStudentData = async (row, columnMapping, academicYear = null) => {
 
     // Get or create student
     let [student, created] = await Student.findOrCreate({
-        where: { registrationNumber },
+        where: { registrationNumber: registrationNumber },
         defaults: {
             registrationNumber,
             firstName,
@@ -62,7 +75,17 @@ const processStudentData = async (row, columnMapping, academicYear = null) => {
             city,
             state,
             pincode,
-            bloodGroup
+            bloodGroup,
+            fatherName,
+            fatherPhone,
+            fatherWhatsapp,
+            fatherEmail,
+            fatherOccupation,
+            motherName,
+            motherPhone,
+            motherWhatsapp,
+            motherEmail,
+            motherOccupation
         }
     });
 
@@ -80,6 +103,19 @@ const processStudentData = async (row, columnMapping, academicYear = null) => {
         student.state = state || student.state;
         student.pincode = pincode || student.pincode;
         student.bloodGroup = bloodGroup || student.bloodGroup;
+        
+        // Update parent info
+        if (fatherName) student.fatherName = fatherName;
+        if (fatherPhone) student.fatherPhone = fatherPhone;
+        if (fatherWhatsapp) student.fatherWhatsapp = fatherWhatsapp;
+        if (fatherEmail) student.fatherEmail = fatherEmail;
+        if (fatherOccupation) student.fatherOccupation = fatherOccupation;
+        if (motherName) student.motherName = motherName;
+        if (motherPhone) student.motherPhone = motherPhone;
+        if (motherWhatsapp) student.motherWhatsapp = motherWhatsapp;
+        if (motherEmail) student.motherEmail = motherEmail;
+        if (motherOccupation) student.motherOccupation = motherOccupation;
+        
         await student.save();
     }
 

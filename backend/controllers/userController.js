@@ -150,7 +150,10 @@ const getUserById = async (req, res) => {
 
 const createUser = async (req, res) => {
     try {
-        const { email, password, name, role } = req.body;
+        const { 
+            email, password, name, role,
+            gender, date_of_birth, phone, address, city, state, pincode, joining_date
+        } = req.body;
 
         // Basic validation
         if (!email || !password || !name) {
@@ -194,7 +197,15 @@ const createUser = async (req, res) => {
             email,
             password,
             name,
-            role: role || 'agent'
+            role: role || 'agent',
+            gender,
+            date_of_birth,
+            phone,
+            address,
+            city,
+            state,
+            pincode,
+            joining_date
         });
 
         const userData = {
@@ -257,7 +268,10 @@ const updateUser = async (req, res) => {
         }
 
         const { id } = req.params;
-        const { email, name, role, isActive } = req.body;
+        const { 
+            email, name, role, isActive,
+            gender, date_of_birth, phone, address, city, state, pincode, joining_date
+        } = req.body;
 
         const user = await User.findByPk(id);
         if (!user) {
@@ -290,7 +304,15 @@ const updateUser = async (req, res) => {
             email: email || user.email,
             name: name || user.name,
             role: req.user.role === 'admin' ? (role !== undefined ? role : user.role) : user.role, // Only admin can change roles
-            isActive: req.user.role === 'admin' ? (isActive !== undefined ? isActive : user.isActive) : user.isActive // Only admin can change active status
+            isActive: req.user.role === 'admin' ? (isActive !== undefined ? isActive : user.isActive) : user.isActive, // Only admin can change active status
+            gender: gender !== undefined ? gender : user.gender,
+            date_of_birth: date_of_birth !== undefined ? date_of_birth : user.date_of_birth,
+            phone: phone !== undefined ? phone : user.phone,
+            address: address !== undefined ? address : user.address,
+            city: city !== undefined ? city : user.city,
+            state: state !== undefined ? state : user.state,
+            pincode: pincode !== undefined ? pincode : user.pincode,
+            joining_date: joining_date !== undefined ? joining_date : user.joining_date
         });
 
         const userData = {
@@ -413,7 +435,15 @@ const updateProfile = async (req, res) => {
 
         await user.update({
             name: name || user.name,
-            email: email || user.email
+            email: email || user.email,
+            gender: gender !== undefined ? gender : user.gender,
+            date_of_birth: date_of_birth !== undefined ? date_of_birth : user.date_of_birth,
+            phone: phone !== undefined ? phone : user.phone,
+            address: address !== undefined ? address : user.address,
+            city: city !== undefined ? city : user.city,
+            state: state !== undefined ? state : user.state,
+            pincode: pincode !== undefined ? pincode : user.pincode,
+            joining_date: joining_date !== undefined ? joining_date : user.joining_date
         });
 
         const userData = {

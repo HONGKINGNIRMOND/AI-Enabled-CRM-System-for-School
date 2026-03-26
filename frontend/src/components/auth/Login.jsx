@@ -35,8 +35,7 @@ const Login = () => {
                     <div className="bg-indigo-600 p-4 rounded-full mb-4">
                         <GraduationCap className="w-12 h-12 text-white" />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-800">School CRM</h1>
-                    <p className="text-gray-600 mt-2">Management System</p>
+                    <h1 className="text-3xl font-bold text-gray-800">Demo school</h1>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -98,15 +97,7 @@ const Login = () => {
                     </button>
                 </form>
 
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                    <p className="text-sm text-gray-600 text-center">
-                        Demo Credentials:
-                    </p>
-                    <div className="mt-2 text-xs text-gray-500 space-y-1">
-                        <p>Admin: admin@school.com / admin123</p>
-                        <p>Teacher: teacher@school.com / teacher123</p>
-                    </div>
-                </div>
+                {/* Demo credentials removed */}
             </div>
         </div>
     );

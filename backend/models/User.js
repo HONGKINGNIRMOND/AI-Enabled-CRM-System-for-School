@@ -39,9 +39,46 @@ const User = sequelize.define('User', {
         allowNull: false
     },
     role: {
-        type: DataTypes.ENUM('admin', 'teacher', 'agent', 'management'),
+        type: DataTypes.ENUM('admin', 'teacher', 'agent', 'management', 'hod'),
         defaultValue: 'teacher',
         allowNull: false
+    },
+    gender: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    date_of_birth: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    phone: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    address: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    city: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    state: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    pincode: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    joining_date: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: DataTypes.NOW
+    },
+    primary_subject: {
+        type: DataTypes.STRING,
+        allowNull: true
     },
     isActive: {
         type: DataTypes.BOOLEAN,

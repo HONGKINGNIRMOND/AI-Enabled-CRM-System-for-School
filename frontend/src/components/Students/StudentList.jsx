@@ -4,6 +4,7 @@ import { studentsAPI, masterAPI } from '../../services/api';
 import { Search, Plus, Upload, ArrowLeft, Trash2, Ban, CheckCircle, ArrowUpDown, MessageSquare, Send } from 'lucide-react';
 import BulkUploadModal from '../common/BulkUploadModal';
 import StudentFormModal from './StudentFormModal';
+import { sharedRecordSchema } from '../../utils/recordSchema';
 
 const StudentList = () => {
     const navigate = useNavigate();
@@ -14,6 +15,7 @@ const StudentList = () => {
     const [sortOrder, setSortOrder] = useState('asc');
     const [filterClass, setFilterClass] = useState('');
     const [filterSection, setFilterSection] = useState('');
+    const [filterState, setFilterState] = useState('');
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
     const [showStudentModal, setShowStudentModal] = useState(false);
@@ -36,7 +38,7 @@ const StudentList = () => {
 
     useEffect(() => {
         fetchStudents();
-    }, [search, sortBy, sortOrder, filterClass, filterSection]);
+    }, [search, sortBy, sortOrder, filterClass, filterSection, filterState]);
 
     const fetchClasses = async () => {
         try {
@@ -64,7 +66,8 @@ const StudentList = () => {
                 page: 1,
                 limit: 100,
                 ...(filterClass && { class_id: filterClass }),
-                ...(filterSection && { section_id: filterSection })
+                ...(filterSection && { section_id: filterSection }),
+                ...(filterState && { state: filterState })
             };
             const response = await studentsAPI.getAll(params);
             let studentsList = response.data.data.students;
@@ -281,6 +284,16 @@ const StudentList = () => {
                                 <option value="">All Sections</option>
                                 {sections.map(s => (
                                     <option key={s.id} value={s.id}>{s.section_name}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={filterState}
+                                onChange={(e) => setFilterState(e.target.value)}
+                                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[120px]"
+                            >
+                                <option value="">All States</option>
+                                {sharedRecordSchema['State'].options.map(state => (
+                                    <option key={state} value={state}>{state}</option>
                                 ))}
                             </select>
                             <select

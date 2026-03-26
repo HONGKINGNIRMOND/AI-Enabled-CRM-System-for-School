@@ -68,7 +68,7 @@ const TeacherDashboard = () => {
                         className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
                     >
                         <Users className="w-12 h-12 text-orange-600 mb-4" />
-                        <h3 className="text-xl font-bold text-gray-800">Quick Action CRM</h3>
+                        <h3 className="text-xl font-bold text-gray-800">Quick Action</h3>
                         <p className="text-gray-600 mt-2">Search students and send updates</p>
                     </Link>
                 </div>

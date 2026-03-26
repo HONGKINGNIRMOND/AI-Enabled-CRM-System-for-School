@@ -150,7 +150,17 @@ const createStudent = async (req, res) => {
             city,
             state,
             pincode,
-            admission_date
+            admission_date,
+            father_name,
+            father_phone,
+            father_whatsapp,
+            father_email,
+            father_occupation,
+            mother_name,
+            mother_phone,
+            mother_whatsapp,
+            mother_email,
+            mother_occupation
         } = req.body;
 
         // Validate required fields
@@ -181,17 +191,26 @@ const createStudent = async (req, res) => {
             firstName: first_name,
             lastName: last_name,
             dateOfBirth: date_of_birth,
-            gender: gender || 'Male',
-            bloodGroup: blood_group || null,
-            phone: phone || null,
-            email: email || null,
-            address: address || null,
-            city: city || null,
-            state: state || null,
-            pincode: pincode || null,
+            gender: gender,
+            bloodGroup: blood_group,
+            phone: phone,
+            email: email,
+            address: address,
+            city: city,
+            state: state,
+            pincode: pincode,
             admissionDate: admission_date,
             assignedTeacherId: assigned_teacher_id,
-            isActive: true
+            fatherName: father_name,
+            fatherPhone: father_phone,
+            fatherWhatsapp: father_whatsapp,
+            fatherEmail: father_email,
+            fatherOccupation: father_occupation,
+            motherName: mother_name,
+            motherPhone: mother_phone,
+            motherWhatsapp: mother_whatsapp,
+            motherEmail: mother_email,
+            motherOccupation: mother_occupation
         });
 
         res.status(201).json({
@@ -281,20 +300,48 @@ const getAllStudents = async (req, res) => {
         const limit = parseInt(req.query.limit) || 50;
         const offset = (page - 1) * limit;
         const search = req.query.search || '';
+        const city = req.query.city || '';
+        const state = req.query.state || '';
+        const classId = req.query.class_id || '';
+        const sectionId = req.query.section_id || '';
         const includeInactive = req.query.includeInactive === 'true';
 
-        // Build the WHERE clause for search
+        // Build the WHERE clause for search and filters
         let searchCondition = '';
         let params = [];
         let paramIndex = 1;
 
         if (search) {
-            searchCondition = `AND (
+            searchCondition += ` AND (
                 s.first_name ILIKE $${paramIndex} OR 
                 s.last_name ILIKE $${paramIndex} OR 
                 s.registration_number ILIKE $${paramIndex}
             )`;
             params.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        if (city) {
+            searchCondition += ` AND s.city = $${paramIndex}`;
+            params.push(city);
+            paramIndex++;
+        }
+
+        if (state) {
+            searchCondition += ` AND s.state = $${paramIndex}`;
+            params.push(state);
+            paramIndex++;
+        }
+
+        if (classId) {
+            searchCondition += ` AND se.class_id = $${paramIndex}`;
+            params.push(classId);
+            paramIndex++;
+        }
+
+        if (sectionId) {
+            searchCondition += ` AND se.section_id = $${paramIndex}`;
+            params.push(sectionId);
             paramIndex++;
         }
 
@@ -391,7 +438,17 @@ const updateStudent = async (req, res) => {
             state,
             pincode,
             admission_date,
-            is_active
+            is_active,
+            father_name,
+            father_phone,
+            father_whatsapp,
+            father_email,
+            father_occupation,
+            mother_name,
+            mother_phone,
+            mother_whatsapp,
+            mother_email,
+            mother_occupation
         } = req.body;
 
         const student = await Student.findByPk(id);
@@ -419,6 +476,18 @@ const updateStudent = async (req, res) => {
         if (admission_date !== undefined) student.admissionDate = admission_date;
         if (req.body.assigned_teacher_id !== undefined) student.assignedTeacherId = req.body.assigned_teacher_id;
         if (is_active !== undefined) student.isActive = is_active;
+        
+        // Update parent info
+        if (father_name !== undefined) student.fatherName = father_name;
+        if (father_phone !== undefined) student.fatherPhone = father_phone;
+        if (father_whatsapp !== undefined) student.fatherWhatsapp = father_whatsapp;
+        if (father_email !== undefined) student.fatherEmail = father_email;
+        if (father_occupation !== undefined) student.fatherOccupation = father_occupation;
+        if (mother_name !== undefined) student.motherName = mother_name;
+        if (mother_phone !== undefined) student.motherPhone = mother_phone;
+        if (mother_whatsapp !== undefined) student.motherWhatsapp = mother_whatsapp;
+        if (mother_email !== undefined) student.motherEmail = mother_email;
+        if (mother_occupation !== undefined) student.motherOccupation = mother_occupation;
 
         await student.save();
 

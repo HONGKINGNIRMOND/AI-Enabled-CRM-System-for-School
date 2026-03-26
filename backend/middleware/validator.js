@@ -104,7 +104,15 @@ const schemas = {
         password: Joi.string().min(6).required(),
         role_id: Joi.number().integer().optional(),
         full_name: Joi.string().required().max(255),
-        phone: Joi.string().max(20).optional().allow('', null)
+        phone: Joi.string().max(20).optional().allow('', null),
+        gender: Joi.string().valid('Male', 'Female', 'Other').optional().allow('', null),
+        date_of_birth: Joi.date().optional().allow('', null),
+        address: Joi.string().optional().allow('', null),
+        city: Joi.string().max(100).optional().allow('', null),
+        state: Joi.string().max(100).optional().allow('', null),
+        pincode: Joi.string().max(10).optional().allow('', null),
+        joining_date: Joi.date().optional().allow('', null),
+        primary_subject: Joi.string().max(100).optional().allow('', null)
     }),
 
     teacherBulk: Joi.object({

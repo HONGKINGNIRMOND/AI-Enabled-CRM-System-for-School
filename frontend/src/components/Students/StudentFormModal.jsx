@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Save, AlertCircle, Users } from 'lucide-react';
 import { masterAPI, teachersAPI } from '../../services/api';
 
+import { sharedRecordSchema } from '../../utils/recordSchema';
+
 const StudentFormModal = ({ student = null, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
         first_name: student?.first_name || '',
         last_name: student?.last_name || '',
-        date_of_birth: student?.date_of_birth ? new Date(student.date_of_birth).toISOString().split('T')[0] : '',
+        date_of_birth: student?.date_of_birth ? new Date(student.date_of_birth).toISOString().slice(0, 10) : '',
         gender: student?.gender || 'Male',
         blood_group: student?.blood_group || '',
         phone: student?.phone || '',
@@ -15,7 +17,7 @@ const StudentFormModal = ({ student = null, onSave, onCancel }) => {
         city: student?.city || '',
         state: student?.state || '',
         pincode: student?.pincode || '',
-        admission_date: student?.admission_date ? new Date(student.admission_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        admission_date: student?.admission_date ? new Date(student.admission_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
         class_id: student?.class_id || '',
         section_id: student?.section_id || '',
         assigned_teacher_id: student?.assigned_teacher_id || '',
@@ -365,23 +367,31 @@ const StudentFormModal = ({ student = null, onSave, onCancel }) => {
                         <div className="grid grid-cols-2 md:grid-cols-3 md:col-span-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-bold text-gray-700 ml-1">City</label>
-                                <input
-                                    type="text"
+                                <select
                                     name="city"
                                     value={formData.city}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
-                                />
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all bg-white"
+                                >
+                                    <option value="">Select City</option>
+                                    {sharedRecordSchema['City'].options.map(city => (
+                                        <option key={city} value={city}>{city}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-bold text-gray-700 ml-1">State</label>
-                                <input
-                                    type="text"
+                                <select
                                     name="state"
                                     value={formData.state}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
-                                />
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all bg-white"
+                                >
+                                    <option value="">Select State</option>
+                                    {sharedRecordSchema['State'].options.map(state => (
+                                        <option key={state} value={state}>{state}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="col-span-2 md:col-span-1 space-y-1.5">
                                 <label className="block text-sm font-bold text-gray-700 ml-1">Pincode</label>

@@ -32,116 +32,81 @@ A comprehensive School Management CRM System designed to streamline academic and
 ## Getting Started
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v16.x or later)
-- [PostgreSQL](https://www.postgresql.org/)
-- npm or yarn
+- **Node.js**: v18.x or later
+- **PostgreSQL**: v14.x or later
+- **npm**: v9.x or later
 
-### Deployment Instructions
-
-#### 1. Database Setup
-1. **Create Database**: Open your PostgreSQL terminal (psql) or pgAdmin and create a new database:
+### 1. Database Setup
+1. **Create Database**:
    ```sql
    CREATE DATABASE school_crm;
    ```
-2. **Initialize Schema**: Import the initial tables and data using the provided SQL script:
+2. **Initialize Schema**: Import the schema from the root directory:
    ```bash
-   psql -d school_crm -f database/schema.sql
+   psql -U postgres -d school_crm -f database/schema.sql
    ```
-   *(Alternatively, copy-paste the content of `database/schema.sql` into your SQL editor and execute it.)*
 
-#### 2. Backend Configuration
-1. Navigate to the `backend` directory:
+### 2. Backend Configuration
+1. **Install Dependencies**:
    ```bash
    cd backend
-   ```
-2. Install dependencies:
-   ```bash
    npm install
    ```
-3. Create a `.env` file and configure your database connection:
-   ```bash
-   cp .env.example .env
-   ```
-4. **Configure PostgreSQL Connection**: Open `.env` and update the following variables with your local settings:
-   - `DB_HOST`: Set to `localhost` (or your server IP).
-   - `DB_PORT`: Default is `5432`.
-   - `DB_USER`: Your PostgreSQL username (usually `postgres`).
-   - `DB_PASSWORD`: Your PostgreSQL password.
-   - `DB_NAME`: Set to `school_crm`.
-
-   Example `.env` configuration:
+2. **Environment Setup**: Copy `.env.example` to `.env` and update your database credentials:
    ```env
    DB_HOST="localhost"
    DB_PORT=5432
    DB_USER="postgres"
-   DB_PASSWORD="your_secure_password"
+   DB_PASSWORD="your_password"
    DB_NAME="school_crm"
-
-   # Twilio Configuration
-   TWILIO_ACCOUNT_SID="your_sid"
-   TWILIO_AUTH_TOKEN="your_token"
-   TWILIO_PHONE_NUMBER="your_twilio_number"
-   TWILIO_WHATSAPP_NUMBER="whatsapp:your_whatsapp_number"
    ```
-5. **Run Setup**: Execute the setup script to run migrations and create default administrative users:
+3. **Generate Templates**:
    ```bash
-   npm run setup
+   node tools/create_student_template.js
    ```
 
-
-#### 3. Frontend Configuration
-1. Navigate to the `frontend` directory:
+### 3. Frontend Configuration
+1. **Install Dependencies**:
    ```bash
    cd frontend
-   ```
-2. Install dependencies:
-   ```bash
    npm install
    ```
-3. Create a `.env` file:
+2. **Environment Setup**: Ensure `VITE_API_URL` points to your backend:
    ```bash
-   echo "VITE_API_URL=http://localhost:3001/api" > .env
+   # .env
+   VITE_API_URL=http://localhost:3001/api
    ```
 
 ## Running the Project
 
-### Start Backend
+### Development Mode
+Run both backend and frontend simultaneously for development:
 
-#### Development Mode
-From the `backend` directory:
+**Backend**:
 ```bash
+cd backend
 npm run dev
 ```
-The API server will start at `http://localhost:3001`.
 
-#### Production Mode (Clustered)
-To run the backend utilizing all CPU cores for high concurrency (500+ requests):
+**Frontend**:
 ```bash
+cd frontend
+npm run dev
+```
+
+### Production Mode
+For high-performance deployment:
+```bash
+cd backend
 npx pm2 start ecosystem.config.js
 ```
-To monitor the cluster:
-```bash
-npx pm2 monit
-```
 
-### Start Frontend
-From the `frontend` directory:
-```bash
-npm run dev
-```
-The application will be available at `http://localhost:3000` (or the port specified by Vite).
+## Features & Roles
+- **Admin**: Full system management, staff registration, and settings.
+- **HOD**: Department analytics, subject assignments, and faculty performance.
+- **Teacher**: Student management, attendance, marks, and circulars.
 
-## Available Scripts
-
-### Backend
-- `npm start`: Run server in production.
-- `npm run dev`: Run server with nodemon for development.
-- `npm run migrate`: Run database migrations.
-- `npm run setup`: Run migrations and create default users.
-- `npm test`: Run tests with coverage.
-
-### Frontend
-- `npm run dev`: Start Vite development server.
-- `npm run build`: Build for production.
-- `npm run preview`: Preview the production build.
-- `npm run lint`: Lint code using ESLint.
+## Bulk Upload Support
+- **Students**: Upload via `dummy.csv` or Excel template.
+- **Teachers**: Support for "Primary Subject" and profile attributes.
+- **Templates**: Available in `backend/public/templates/`.

@@ -129,7 +129,7 @@ export const masterAPI = {
 
 // Teachers API
 export const teachersAPI = {
-    getAll: () => api.get('/teachers'),
+    getAll: (params) => api.get('/teachers', { params }),
     create: (data) => api.post('/teachers', data),
     bulkUpload: (file) => {
         const formData = new FormData();

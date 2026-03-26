@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { teachersAPI, masterAPI } from '../../services/api';
-import { Users, BookOpen, Plus, Trash2, CheckCircle2, AlertCircle, Loader2, Upload, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { sharedRecordSchema } from '../../utils/recordSchema';
+import { Users, BookOpen, Plus, Trash2, CheckCircle2, AlertCircle, Loader2, Upload, ArrowLeft, Eye, EyeOff, Calendar, MapPin } from 'lucide-react';
 import BulkUploadModal from '../common/BulkUploadModal';
 
 const TeacherManagement = () => {
@@ -24,6 +25,7 @@ const TeacherManagement = () => {
     const [selectedSubject, setSelectedSubject] = useState('');
     const [filterClass, setFilterClass] = useState('');
     const [filterSubject, setFilterSubject] = useState('');
+    const [filterState, setFilterState] = useState('');
 
     // Teacher creation state
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -36,7 +38,15 @@ const TeacherManagement = () => {
         email: '',
         password: '',
         full_name: '',
-        phone: ''
+        phone: '',
+        gender: 'Male',
+        date_of_birth: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+        joining_date: new Date().toISOString().slice(0, 10),
+        primary_subject: ''
     });
 
     // Selection state
@@ -44,13 +54,13 @@ const TeacherManagement = () => {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [filterState]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const [teachersRes, assignmentsRes, classesRes, subjectsRes] = await Promise.all([
-                teachersAPI.getAll(),
+                teachersAPI.getAll({ state: filterState }),
                 teachersAPI.getAssignments(),
                 masterAPI.getClasses(),
                 masterAPI.getSubjects()
@@ -129,7 +139,12 @@ const TeacherManagement = () => {
             setShowCreateModal(false);
             setIsEditing(false);
             setEditingId(null);
-            setNewTeacher({ username: '', email: '', password: '', full_name: '', phone: '' });
+            setNewTeacher({
+                username: '', email: '', password: '', full_name: '', phone: '',
+                gender: 'Male', date_of_birth: '', address: '', city: '', state: '',
+                pincode: '', joining_date: new Date().toISOString().slice(0, 10),
+                primary_subject: ''
+            });
             fetchData();
             setTimeout(() => setSuccess(null), 3000);
         } catch (err) {
@@ -146,7 +161,15 @@ const TeacherManagement = () => {
             email: teacher.email || '',
             password: '', // Don't show password
             full_name: teacher.full_name || '',
-            phone: teacher.phone || ''
+            phone: teacher.phone || '',
+            gender: teacher.gender || 'Male',
+            date_of_birth: teacher.date_of_birth ? new Date(teacher.date_of_birth).toISOString().slice(0, 10) : '',
+            address: teacher.address || '',
+            city: teacher.city || '',
+            state: teacher.state || '',
+            pincode: teacher.pincode || '',
+            joining_date: teacher.joining_date ? teacher.joining_date.slice(0, 10) : '',
+            primary_subject: teacher.primary_subject || ''
         });
         setEditingId(teacher.id);
         setIsEditing(true);
@@ -250,7 +273,11 @@ const TeacherManagement = () => {
                     <button
                         onClick={() => {
                             setIsEditing(false);
-                            setNewTeacher({ username: '', email: '', password: '', full_name: '', phone: '' });
+                            setNewTeacher({ 
+                                username: '', email: '', password: '', full_name: '', phone: '',
+                                gender: 'Male', date_of_birth: '', address: '', city: '', state: '', 
+                                pincode: '', joining_date: new Date().toISOString().slice(0, 16)
+                            });
                             setShowCreateModal(true);
                         }}
                         className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
@@ -484,6 +511,16 @@ const TeacherManagement = () => {
                                     <option key={s.id} value={s.id}>{s.subject_name}</option>
                                 ))}
                             </select>
+                            <select
+                                value={filterState}
+                                onChange={(e) => setFilterState(e.target.value)}
+                                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                            >
+                                <option value="">All States</option>
+                                {sharedRecordSchema['State'].options.map(state => (
+                                    <option key={state} value={state}>{state}</option>
+                                ))}
+                            </select>
                             {selectedTeachers.length > 0 && (
                                 <button
                                     onClick={handleBulkDeleteTeachers}
@@ -524,6 +561,7 @@ const TeacherManagement = () => {
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Teacher Name</th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Email Address</th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Phone</th>
+                                    <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Primary Subject</th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
                                     <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Classes & Subjects</th>
                                     <th className="text-right py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
@@ -577,6 +615,9 @@ const TeacherManagement = () => {
                                             <td className="py-4 px-6 text-gray-600 font-medium">
                                                 {teacher.phone || 'N/A'}
                                             </td>
+                                            <td className="py-4 px-6 text-gray-600 font-medium">
+                                                {teacher.primary_subject || 'N/A'}
+                                            </td>
                                             <td className="py-4 px-6">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${teacher.is_active
                                                     ? 'bg-green-100 text-green-700'
@@ -629,7 +670,7 @@ const TeacherManagement = () => {
             {/* Create Teacher Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
                         <div className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700">
                             <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                 <Users className="w-6 h-6" />
@@ -695,15 +736,111 @@ const TeacherManagement = () => {
                                     </button>
                                 </div>
                             </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Gender</label>
+                                    <select
+                                        value={newTeacher.gender}
+                                        onChange={(e) => setNewTeacher({ ...newTeacher, gender: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                                    >
+                                        {sharedRecordSchema['Gender'].options.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Phone (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={newTeacher.phone}
+                                        onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                        placeholder="+1 234 567 890"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Phone (Optional)</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Primary Subject Handle (e.g. Mathematics)</label>
                                 <input
                                     type="text"
-                                    value={newTeacher.phone}
-                                    onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })}
+                                    value={newTeacher.primary_subject}
+                                    onChange={(e) => setNewTeacher({ ...newTeacher, primary_subject: e.target.value })}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
-                                    placeholder="+1 234 567 890"
+                                    placeholder="Mathematics / English / Science"
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Date of Birth</label>
+                                    <input
+                                        type="date"
+                                        value={newTeacher.date_of_birth}
+                                        onChange={(e) => setNewTeacher({ ...newTeacher, date_of_birth: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Joining Date</label>
+                                    <input
+                                        type="date"
+                                        value={newTeacher.joining_date}
+                                        onChange={(e) => setNewTeacher({ ...newTeacher, joining_date: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Address</label>
+                                <textarea
+                                    value={newTeacher.address}
+                                    onChange={(e) => setNewTeacher({ ...newTeacher, address: e.target.value })}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all resize-none"
+                                    placeholder="Street Address"
+                                    rows="2"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">City</label>
+                                    <select
+                                        value={newTeacher.city}
+                                        onChange={(e) => setNewTeacher({ ...newTeacher, city: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                                    >
+                                        <option value="">Select City</option>
+                                        {sharedRecordSchema['City'].options.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">State</label>
+                                    <select
+                                        value={newTeacher.state}
+                                        onChange={(e) => setNewTeacher({ ...newTeacher, state: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white"
+                                    >
+                                        <option value="">Select State</option>
+                                        {sharedRecordSchema['State'].options.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Pincode</label>
+                                    <input
+                                        type="text"
+                                        value={newTeacher.pincode}
+                                        onChange={(e) => setNewTeacher({ ...newTeacher, pincode: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                                        placeholder="Pincode"
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex gap-3 pt-4">

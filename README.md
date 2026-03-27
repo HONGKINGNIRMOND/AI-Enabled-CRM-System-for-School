@@ -17,17 +17,13 @@ A comprehensive School Management CRM System designed to streamline academic and
 - **Core**: Node.js, Express.js
 - **Database**: PostgreSQL with Sequelize ORM (Connection Pooling Enabled)
 - **Authentication**: JWT, bcryptjs
-- **Notifications**: Nodemailer (Email), Twilio (SMS, WhatsApp, Voice/Telephony)
-- **Performance & Security**: PM2 (Clustering), Helmet, Compression, express-rate-limit
-- **AI Analytics**: OpenAI/Whisper for transcription and insights
-- **Utilities**: Winston (Logging), Joi (Validation), Multer (File Uploads)
+- **Notifications**: Email, SMS, WhatsApp integration
 
 ### Frontend
 - **Framework**: React (Vite-based)
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS, Vanilla CSS
 - **Visualization**: Recharts
 - **Icons**: Lucide React
-- **State/Routing**: React Router Dom
 
 ## Getting Started
 
@@ -36,23 +32,19 @@ A comprehensive School Management CRM System designed to streamline academic and
 - **PostgreSQL**: v14.x or later
 - **npm**: v9.x or later
 
-### 1. Database Setup
-1. **Create Database**:
+### 1. Database & Backend Setup
+1. **Create Database**: Open PostgreSQL and run:
    ```sql
    CREATE DATABASE school_crm;
    ```
-2. **Initialize Schema**: Import the schema from the root directory:
-   ```bash
-   psql -U postgres -d school_crm -f database/schema.sql
-   ```
 
-### 2. Backend Configuration
-1. **Install Dependencies**:
+2. **Backend Configuration**:
    ```bash
    cd backend
    npm install
    ```
-2. **Environment Setup**: Copy `.env.example` to `.env` and update your database credentials:
+
+3. **Environment Setup**: Copy `.env.example` to `.env` and update your database credentials:
    ```env
    DB_HOST="localhost"
    DB_PORT=5432
@@ -60,27 +52,29 @@ A comprehensive School Management CRM System designed to streamline academic and
    DB_PASSWORD="your_password"
    DB_NAME="school_crm"
    ```
-3. **Generate Templates**:
-   ```bash
-   node tools/create_student_template.js
-   ```
 
-### 3. Frontend Configuration
-1. **Install Dependencies**:
+4. **Initialize Project**: Run the automated setup script (idempotent):
+   ```bash
+   npm run setup
+   ```
+   *This command creates all tables and inserts the default admin user.*
+
+### 2. Frontend Configuration
+1. **Frontend Setup**:
    ```bash
    cd frontend
    npm install
    ```
-2. **Environment Setup**: Ensure `VITE_API_URL` points to your backend:
-   ```bash
-   # .env
+
+2. **Environment Setup**: Ensure `VITE_API_URL` points to your backend in `frontend/.env`:
+   ```env
    VITE_API_URL=http://localhost:3001/api
    ```
 
 ## Running the Project
 
 ### Development Mode
-Run both backend and frontend simultaneously for development:
+Run both backend and frontend simultaneously:
 
 **Backend**:
 ```bash
@@ -94,12 +88,10 @@ cd frontend
 npm run dev
 ```
 
-### Production Mode
-For high-performance deployment:
-```bash
-cd backend
-npx pm2 start ecosystem.config.js
-```
+### Accessing the System
+Once the project is running, you can log in with the default admin account:
+- **Email**: `admin@school.com`
+- **Password**: `admin123`
 
 ## Features & Roles
 - **Admin**: Full system management, staff registration, and settings.
@@ -108,5 +100,5 @@ npx pm2 start ecosystem.config.js
 
 ## Bulk Upload Support
 - **Students**: Upload via `dummy.csv` or Excel template.
-- **Teachers**: Support for "Primary Subject" and profile attributes.
 - **Templates**: Available in `backend/public/templates/`.
+- **Primary Subject**: Support for teacher-subject association.

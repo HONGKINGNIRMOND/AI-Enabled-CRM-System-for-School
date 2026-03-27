@@ -4,12 +4,17 @@ const { hashPassword } = require('../config/auth');
 
 const User = sequelize.define('User', {
     id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    username: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        unique: true
     },
     email: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
         validate: {
@@ -17,42 +22,44 @@ const User = sequelize.define('User', {
         }
     },
     password: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
+        field: 'password_hash', // Map to correct column name
+        allowNull: false
+    },
+    roleId: {
+        type: DataTypes.INTEGER,
+        field: 'role_id',
         allowNull: false,
-        validate: {
-            len: [8, 128],
-            isStrongPassword(value) {
-                // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character
-                const hasUpperCase = /[A-Z]/.test(value);
-                const hasLowerCase = /[a-z]/.test(value);
-                const hasNumber = /[0-9]/.test(value);
-                const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
-                
-                if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-                    throw new Error('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character');
-                }
-            }
+        references: {
+            model: 'roles',
+            key: 'id'
+        }
+    },
+    departmentId: {
+        type: DataTypes.INTEGER,
+        field: 'department_id',
+        allowNull: true,
+        references: {
+            model: 'departments',
+            key: 'id'
         }
     },
     name: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    role: {
-        type: DataTypes.ENUM('admin', 'teacher', 'agent', 'management', 'hod'),
-        defaultValue: 'teacher',
+        type: DataTypes.STRING(255),
+        field: 'full_name', // Map to correct column name
         allowNull: false
     },
     gender: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(20),
         allowNull: true
     },
-    date_of_birth: {
+    dateOfBirth: {
         type: DataTypes.DATE,
+        field: 'date_of_birth',
         allowNull: true
     },
     phone: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(20),
         allowNull: true
     },
     address: {
@@ -60,37 +67,50 @@ const User = sequelize.define('User', {
         allowNull: true
     },
     city: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(100),
         allowNull: true
     },
     state: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(100),
         allowNull: true
     },
     pincode: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(20),
         allowNull: true
     },
-    joining_date: {
+    joiningDate: {
         type: DataTypes.DATE,
+        field: 'joining_date',
         allowNull: true,
         defaultValue: DataTypes.NOW
     },
-    primary_subject: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
     isActive: {
         type: DataTypes.BOOLEAN,
+        field: 'is_active',
         defaultValue: true
+    },
+    lastLogin: {
+        type: DataTypes.DATE,
+        field: 'last_login',
+        allowNull: true
+    },
+    primarySubject: {
+        type: DataTypes.STRING(100),
+        field: 'primary_subject',
+        allowNull: true
     }
 }, {
     tableName: 'users',
     timestamps: true,
+    underscored: true,
     indexes: [
         {
             unique: true,
             fields: ['email']
+        },
+        {
+            unique: true,
+            fields: ['username']
         }
     ]
 });
@@ -98,16 +118,14 @@ const User = sequelize.define('User', {
 // Hash password before saving
 User.beforeCreate(async (user) => {
     if (user.password && !user.password.startsWith('$2')) {
-        // Only hash if not already hashed (bcrypt hashes start with $2)
         user.password = await hashPassword(user.password);
     }
 });
 
 User.beforeUpdate(async (user) => {
     if (user.changed('password') && user.password && !user.password.startsWith('$2')) {
-        // Only hash if not already hashed (bcrypt hashes start with $2)
         user.password = await hashPassword(user.password);
     }
 });
 
-module.exports = User;
+module.exports = User;

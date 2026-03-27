@@ -1,5 +1,5 @@
 -- School Management CRM System - Database Schema
--- PostgreSQL Database Schema
+-- PostgreSQL Database Schema (Idempotent Version)
 
 -- Connect to 'school_crm' database before running this script if it exists,
 -- or creating it via: CREATE DATABASE school_crm;
@@ -20,20 +20,30 @@ $$ language 'plpgsql';
 -- ENUM Types
 DO $$ BEGIN
     CREATE TYPE user_gender AS ENUM('Male', 'Female', 'Other');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
     CREATE TYPE attendance_status_enum AS ENUM('Present', 'Absent', 'Late', 'Excused');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
     CREATE TYPE notification_recipient_type AS ENUM('user', 'student');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
     CREATE TYPE notification_channel AS ENUM('sms', 'email', 'whatsapp', 'in-app');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
     CREATE TYPE notification_status AS ENUM('pending', 'sent', 'failed', 'read');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- ============================================
 -- USER MANAGEMENT TABLES
 -- ============================================
 
 -- Roles Table
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id SERIAL PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
@@ -41,28 +51,24 @@ CREATE TABLE roles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER update_roles_modtime
-    BEFORE UPDATE ON roles
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_roles_modtime') THEN
+        CREATE TRIGGER update_roles_modtime
+            BEFORE UPDATE ON roles
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Insert default roles
-INSERT INTO
-    roles (role_name, description)
-VALUES (
-        'admin',
-        'System Administrator with full access'
-    ),
-    (
-        'hod',
-        'Head of Department'
-    ),
-    (
-        'teacher',
-        'Teacher with access to assigned classes'
-    );
+INSERT INTO roles (role_name, description)
+VALUES 
+    ('admin', 'System Administrator with full access'),
+    ('hod', 'Head of Department'),
+    ('teacher', 'Teacher with access to assigned classes')
+ON CONFLICT (role_name) DO NOTHING;
 
 -- Departments Table
-CREATE TABLE departments (
+CREATE TABLE IF NOT EXISTS departments (
     id SERIAL PRIMARY KEY,
     department_name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
@@ -72,12 +78,16 @@ CREATE TABLE departments (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER update_departments_modtime
-    BEFORE UPDATE ON departments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_departments_modtime') THEN
+        CREATE TRIGGER update_departments_modtime
+            BEFORE UPDATE ON departments
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Users Table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -95,29 +105,39 @@ CREATE TABLE users (
     joining_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
     last_login TIMESTAMP NULL,
+    primary_subject VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE RESTRICT,
     FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL
 );
 
-CREATE TRIGGER update_users_modtime
-    BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_users_modtime') THEN
+        CREATE TRIGGER update_users_modtime
+            BEFORE UPDATE ON users
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-ALTER TABLE departments ADD CONSTRAINT fk_departments_hod FOREIGN KEY (hod_id) REFERENCES users (id) ON DELETE SET NULL;
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_departments_hod') THEN
+        ALTER TABLE departments ADD CONSTRAINT fk_departments_hod FOREIGN KEY (hod_id) REFERENCES users (id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
-CREATE INDEX idx_users_email ON users (email);
-CREATE INDEX idx_users_username ON users (username);
-CREATE INDEX idx_users_role ON users (role_id);
-CREATE INDEX idx_users_department ON users (department_id);
+-- Indexes for users
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users (role_id);
+CREATE INDEX IF NOT EXISTS idx_users_department ON users (department_id);
 
 -- ============================================
 -- ACADEMIC STRUCTURE TABLES
 -- ============================================
 
 -- Classes Table
-CREATE TABLE classes (
+CREATE TABLE IF NOT EXISTS classes (
     id SERIAL PRIMARY KEY,
     class_name VARCHAR(50) NOT NULL,
     academic_year VARCHAR(20) NOT NULL,
@@ -128,14 +148,18 @@ CREATE TABLE classes (
     UNIQUE (class_name, academic_year)
 );
 
-CREATE TRIGGER update_classes_modtime
-    BEFORE UPDATE ON classes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_classes_modtime') THEN
+        CREATE TRIGGER update_classes_modtime
+            BEFORE UPDATE ON classes
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_classes_academic_year ON classes (academic_year);
+CREATE INDEX IF NOT EXISTS idx_classes_academic_year ON classes (academic_year);
 
 -- Sections Table
-CREATE TABLE sections (
+CREATE TABLE IF NOT EXISTS sections (
     id SERIAL PRIMARY KEY,
     class_id INT NOT NULL,
     section_name VARCHAR(10) NOT NULL,
@@ -149,14 +173,18 @@ CREATE TABLE sections (
     UNIQUE (class_id, section_name)
 );
 
-CREATE TRIGGER update_sections_modtime
-    BEFORE UPDATE ON sections
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_sections_modtime') THEN
+        CREATE TRIGGER update_sections_modtime
+            BEFORE UPDATE ON sections
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_sections_class ON sections (class_id);
+CREATE INDEX IF NOT EXISTS idx_sections_class ON sections (class_id);
 
 -- Subjects Table
-CREATE TABLE subjects (
+CREATE TABLE IF NOT EXISTS subjects (
     id SERIAL PRIMARY KEY,
     subject_name VARCHAR(100) NOT NULL UNIQUE,
     subject_code VARCHAR(20) UNIQUE,
@@ -168,15 +196,19 @@ CREATE TABLE subjects (
     FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL
 );
 
-CREATE TRIGGER update_subjects_modtime
-    BEFORE UPDATE ON subjects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_subjects_modtime') THEN
+        CREATE TRIGGER update_subjects_modtime
+            BEFORE UPDATE ON subjects
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_subjects_code ON subjects (subject_code);
-CREATE INDEX idx_subjects_department ON subjects (department_id);
+CREATE INDEX IF NOT EXISTS idx_subjects_code ON subjects (subject_code);
+CREATE INDEX IF NOT EXISTS idx_subjects_department ON subjects (department_id);
 
 -- Class-Subject Mapping
-CREATE TABLE class_subjects (
+CREATE TABLE IF NOT EXISTS class_subjects (
     id SERIAL PRIMARY KEY,
     class_id INT NOT NULL,
     subject_id INT NOT NULL,
@@ -191,18 +223,22 @@ CREATE TABLE class_subjects (
     UNIQUE (class_id, subject_id)
 );
 
-CREATE TRIGGER update_class_subjects_modtime
-    BEFORE UPDATE ON class_subjects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_class_subjects_modtime') THEN
+        CREATE TRIGGER update_class_subjects_modtime
+            BEFORE UPDATE ON class_subjects
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_class_subjects_teacher ON class_subjects (teacher_id);
+CREATE INDEX IF NOT EXISTS idx_class_subjects_teacher ON class_subjects (teacher_id);
 
 -- ============================================
 -- STUDENT & PARENT INFORMATION TABLES
 -- ============================================
 
 -- Students Table
-CREATE TABLE students (
+CREATE TABLE IF NOT EXISTS students (
     id SERIAL PRIMARY KEY,
     registration_number VARCHAR(50) NOT NULL UNIQUE,
     first_name VARCHAR(100) NOT NULL,
@@ -225,16 +261,20 @@ CREATE TABLE students (
     FOREIGN KEY (assigned_teacher_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE TRIGGER update_students_modtime
-    BEFORE UPDATE ON students
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_students_modtime') THEN
+        CREATE TRIGGER update_students_modtime
+            BEFORE UPDATE ON students
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_students_registration ON students (registration_number);
-CREATE INDEX idx_students_name ON students (first_name, last_name);
-CREATE INDEX idx_students_active ON students (is_active);
+CREATE INDEX IF NOT EXISTS idx_students_registration ON students (registration_number);
+CREATE INDEX IF NOT EXISTS idx_students_name ON students (first_name, last_name);
+CREATE INDEX IF NOT EXISTS idx_students_active ON students (is_active);
 
 -- Parents Table
-CREATE TABLE parents (
+CREATE TABLE IF NOT EXISTS parents (
     id SERIAL PRIMARY KEY,
     father_name VARCHAR(255),
     mother_name VARCHAR(255),
@@ -254,15 +294,19 @@ CREATE TABLE parents (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TRIGGER update_parents_modtime
-    BEFORE UPDATE ON parents
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_parents_modtime') THEN
+        CREATE TRIGGER update_parents_modtime
+            BEFORE UPDATE ON parents
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_parents_father_whatsapp ON parents(father_whatsapp);
-CREATE INDEX idx_parents_mother_whatsapp ON parents(mother_whatsapp);
+CREATE INDEX IF NOT EXISTS idx_parents_father_whatsapp ON parents(father_whatsapp);
+CREATE INDEX IF NOT EXISTS idx_parents_mother_whatsapp ON parents(mother_whatsapp);
 
 -- Student-Parents Junction Table
-CREATE TABLE student_parents (
+CREATE TABLE IF NOT EXISTS student_parents (
     id SERIAL PRIMARY KEY,
     student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
     parent_id INTEGER REFERENCES parents(id) ON DELETE CASCADE,
@@ -272,11 +316,11 @@ CREATE TABLE student_parents (
     UNIQUE(student_id, parent_id)
 );
 
-CREATE INDEX idx_student_parents_student_id ON student_parents(student_id);
-CREATE INDEX idx_student_parents_parent_id ON student_parents(parent_id);
+CREATE INDEX IF NOT EXISTS idx_student_parents_student_id ON student_parents(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_parents_parent_id ON student_parents(parent_id);
 
 -- Student Enrollments
-CREATE TABLE student_enrollments (
+CREATE TABLE IF NOT EXISTS student_enrollments (
     id SERIAL PRIMARY KEY,
     student_id INT NOT NULL,
     class_id INT NOT NULL,
@@ -293,20 +337,24 @@ CREATE TABLE student_enrollments (
     UNIQUE (student_id, academic_year)
 );
 
-CREATE TRIGGER update_student_enrollments_modtime
-    BEFORE UPDATE ON student_enrollments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_student_enrollments_modtime') THEN
+        CREATE TRIGGER update_student_enrollments_modtime
+            BEFORE UPDATE ON student_enrollments
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_enrollments_class_section ON student_enrollments (class_id, section_id);
-CREATE INDEX idx_enrollments_academic_year ON student_enrollments (academic_year);
-CREATE INDEX idx_enrollments_current ON student_enrollments (is_current);
+CREATE INDEX IF NOT EXISTS idx_enrollments_class_section ON student_enrollments (class_id, section_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_academic_year ON student_enrollments (academic_year);
+CREATE INDEX IF NOT EXISTS idx_enrollments_current ON student_enrollments (is_current);
 
 -- ============================================
 -- ATTENDANCE TABLES
 -- ============================================
 
 -- Attendance Table
-CREATE TABLE attendance (
+CREATE TABLE IF NOT EXISTS attendance (
     id SERIAL PRIMARY KEY,
     student_id INT NOT NULL,
     class_id INT NOT NULL,
@@ -325,16 +373,20 @@ CREATE TABLE attendance (
     UNIQUE (student_id, attendance_date, session)
 );
 
-CREATE TRIGGER update_attendance_modtime
-    BEFORE UPDATE ON attendance
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_attendance_modtime') THEN
+        CREATE TRIGGER update_attendance_modtime
+            BEFORE UPDATE ON attendance
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_attendance_date ON attendance (attendance_date);
-CREATE INDEX idx_attendance_class_section_date ON attendance (class_id, section_id, attendance_date);
-CREATE INDEX idx_attendance_student_date ON attendance (student_id, attendance_date);
+CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance (attendance_date);
+CREATE INDEX IF NOT EXISTS idx_attendance_class_section_date ON attendance (class_id, section_id, attendance_date);
+CREATE INDEX IF NOT EXISTS idx_attendance_student_date ON attendance (student_id, attendance_date);
 
 -- Attendance Summary
-CREATE TABLE attendance_summary (
+CREATE TABLE IF NOT EXISTS attendance_summary (
     id SERIAL PRIMARY KEY,
     student_id INT NOT NULL,
     academic_year VARCHAR(20) NOT NULL,
@@ -351,18 +403,22 @@ CREATE TABLE attendance_summary (
     UNIQUE (student_id, academic_year, month)
 );
 
-CREATE TRIGGER update_attendance_summary_modtime
-    BEFORE UPDATE ON attendance_summary
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_attendance_summary_modtime') THEN
+        CREATE TRIGGER update_attendance_summary_modtime
+            BEFORE UPDATE ON attendance_summary
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_attendance_summary_year_month ON attendance_summary (academic_year, month);
+CREATE INDEX IF NOT EXISTS idx_attendance_summary_year_month ON attendance_summary (academic_year, month);
 
 -- ============================================
 -- MARKS AND GRADES TABLES
 -- ============================================
 
 -- Exam Types
-CREATE TABLE exam_types (
+CREATE TABLE IF NOT EXISTS exam_types (
     id SERIAL PRIMARY KEY,
     exam_name VARCHAR(100) NOT NULL,
     exam_code VARCHAR(20) UNIQUE,
@@ -372,9 +428,13 @@ CREATE TABLE exam_types (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER update_exam_types_modtime
-    BEFORE UPDATE ON exam_types
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_exam_types_modtime') THEN
+        CREATE TRIGGER update_exam_types_modtime
+            BEFORE UPDATE ON exam_types
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Insert default exam types
 INSERT INTO exam_types (exam_name, exam_code, weightage)
@@ -382,10 +442,11 @@ VALUES
     ('First Internal', 'INT1', 20.00),
     ('Mid-Term', 'MID', 30.00),
     ('Second Internal', 'INT2', 20.00),
-    ('Final Exam', 'FINAL', 30.00);
+    ('Final Exam', 'FINAL', 30.00)
+ON CONFLICT (exam_code) DO NOTHING;
 
 -- Internal Marks Table
-CREATE TABLE internal_marks (
+CREATE TABLE IF NOT EXISTS internal_marks (
     id SERIAL PRIMARY KEY,
     student_id INT NOT NULL,
     class_subject_id INT NOT NULL,
@@ -405,16 +466,20 @@ CREATE TABLE internal_marks (
     UNIQUE (student_id, class_subject_id, exam_type_id, academic_year)
 );
 
-CREATE TRIGGER update_internal_marks_modtime
-    BEFORE UPDATE ON internal_marks
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_internal_marks_modtime') THEN
+        CREATE TRIGGER update_internal_marks_modtime
+            BEFORE UPDATE ON internal_marks
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_internal_marks_student ON internal_marks (student_id);
-CREATE INDEX idx_internal_marks_class_subject ON internal_marks (class_subject_id);
-CREATE INDEX idx_internal_marks_academic_year ON internal_marks (academic_year);
+CREATE INDEX IF NOT EXISTS idx_internal_marks_student ON internal_marks (student_id);
+CREATE INDEX IF NOT EXISTS idx_internal_marks_class_subject ON internal_marks (class_subject_id);
+CREATE INDEX IF NOT EXISTS idx_internal_marks_academic_year ON internal_marks (academic_year);
 
 -- Grading Rules Table
-CREATE TABLE grading_rules (
+CREATE TABLE IF NOT EXISTS grading_rules (
     id SERIAL PRIMARY KEY,
     grade_name VARCHAR(5) NOT NULL,
     min_percentage DECIMAL(5, 2) NOT NULL,
@@ -425,11 +490,15 @@ CREATE TABLE grading_rules (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER update_grading_rules_modtime
-    BEFORE UPDATE ON grading_rules
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_grading_rules_modtime') THEN
+        CREATE TRIGGER update_grading_rules_modtime
+            BEFORE UPDATE ON grading_rules
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_grading_rules_percentage ON grading_rules (min_percentage, max_percentage);
+CREATE INDEX IF NOT EXISTS idx_grading_rules_percentage ON grading_rules (min_percentage, max_percentage);
 
 -- Insert default grading rules
 INSERT INTO grading_rules (grade_name, min_percentage, max_percentage, grade_point, description)
@@ -441,10 +510,11 @@ VALUES
     ('C+', 50.00, 59.99, 6.00, 'Above Average'),
     ('C', 40.00, 49.99, 5.00, 'Average'),
     ('D', 35.00, 39.99, 4.00, 'Pass'),
-    ('F', 0.00, 34.99, 0.00, 'Fail');
+    ('F', 0.00, 34.99, 0.00, 'Fail')
+ON CONFLICT DO NOTHING;
 
 -- Student Grades Table (Calculated grades)
-CREATE TABLE student_grades (
+CREATE TABLE IF NOT EXISTS student_grades (
     id SERIAL PRIMARY KEY,
     student_id INT NOT NULL,
     class_subject_id INT NOT NULL,
@@ -463,19 +533,23 @@ CREATE TABLE student_grades (
     UNIQUE (student_id, class_subject_id, academic_year)
 );
 
-CREATE TRIGGER update_student_grades_modtime
-    BEFORE UPDATE ON student_grades
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_student_grades_modtime') THEN
+        CREATE TRIGGER update_student_grades_modtime
+            BEFORE UPDATE ON student_grades
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_student_grades_student_year ON student_grades (student_id, academic_year);
-CREATE INDEX idx_student_grades_grade ON student_grades (grade_id);
+CREATE INDEX IF NOT EXISTS idx_student_grades_student_year ON student_grades (student_id, academic_year);
+CREATE INDEX IF NOT EXISTS idx_student_grades_grade ON student_grades (grade_id);
 
 -- ============================================
 -- FEES MANAGEMENT TABLES
 -- ============================================
 
 -- Fees table for student fee status
-CREATE TABLE fees (
+CREATE TABLE IF NOT EXISTS fees (
     id SERIAL PRIMARY KEY,
     student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
     total_fee DECIMAL(10, 2) DEFAULT 0,
@@ -488,16 +562,20 @@ CREATE TABLE fees (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TRIGGER update_fees_modtime
-    BEFORE UPDATE ON fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_fees_modtime') THEN
+        CREATE TRIGGER update_fees_modtime
+            BEFORE UPDATE ON fees
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_fees_student_id ON fees(student_id);
-CREATE INDEX idx_fees_academic_year ON fees(academic_year);
-CREATE INDEX idx_fees_payment_status ON fees(payment_status);
+CREATE INDEX IF NOT EXISTS idx_fees_student_id ON fees(student_id);
+CREATE INDEX IF NOT EXISTS idx_fees_academic_year ON fees(academic_year);
+CREATE INDEX IF NOT EXISTS idx_fees_payment_status ON fees(payment_status);
 
 -- Class Fee Structure Table
-CREATE TABLE class_fee_structure (
+CREATE TABLE IF NOT EXISTS class_fee_structure (
     id SERIAL PRIMARY KEY,
     class_id INT NOT NULL,
     fee_type VARCHAR(100) NOT NULL,
@@ -511,19 +589,23 @@ CREATE TABLE class_fee_structure (
     UNIQUE (class_id, fee_type, academic_year)
 );
 
-CREATE TRIGGER update_class_fee_structure_modtime
-    BEFORE UPDATE ON class_fee_structure
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_class_fee_structure_modtime') THEN
+        CREATE TRIGGER update_class_fee_structure_modtime
+            BEFORE UPDATE ON class_fee_structure
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_class_fee_structure_class ON class_fee_structure (class_id);
-CREATE INDEX idx_class_fee_structure_academic_year ON class_fee_structure (academic_year);
+CREATE INDEX IF NOT EXISTS idx_class_fee_structure_class ON class_fee_structure (class_id);
+CREATE INDEX IF NOT EXISTS idx_class_fee_structure_academic_year ON class_fee_structure (academic_year);
 
 -- ============================================
 -- NOTIFICATION TABLES
 -- ============================================
 
 -- Notification Types
-CREATE TABLE notification_types (
+CREATE TABLE IF NOT EXISTS notification_types (
     id SERIAL PRIMARY KEY,
     type_name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
@@ -537,10 +619,11 @@ VALUES
     ('marks', 'Marks and grades notifications'),
     ('announcement', 'General announcements'),
     ('fee', 'Fee payment reminders'),
-    ('event', 'School events and activities');
+    ('event', 'School events and activities')
+ON CONFLICT (type_name) DO NOTHING;
 
 -- Notifications Table
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
     notification_type_id INT NOT NULL,
     recipient_id INT NOT NULL,
@@ -558,16 +641,20 @@ CREATE TABLE notifications (
     FOREIGN KEY (notification_type_id) REFERENCES notification_types (id) ON DELETE CASCADE
 );
 
-CREATE TRIGGER update_notifications_modtime
-    BEFORE UPDATE ON notifications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_notifications_modtime') THEN
+        CREATE TRIGGER update_notifications_modtime
+            BEFORE UPDATE ON notifications
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE INDEX idx_notifications_recipient ON notifications (recipient_id, recipient_type);
-CREATE INDEX idx_notifications_status ON notifications (status);
-CREATE INDEX idx_notifications_created ON notifications (created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications (recipient_id, recipient_type);
+CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications (status);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications (created_at);
 
 -- Notification Preferences
-CREATE TABLE notification_preferences (
+CREATE TABLE IF NOT EXISTS notification_preferences (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     notification_type_id INT NOT NULL,
@@ -582,16 +669,20 @@ CREATE TABLE notification_preferences (
     UNIQUE (user_id, notification_type_id)
 );
 
-CREATE TRIGGER update_notification_preferences_modtime
-    BEFORE UPDATE ON notification_preferences
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_notification_preferences_modtime') THEN
+        CREATE TRIGGER update_notification_preferences_modtime
+            BEFORE UPDATE ON notification_preferences
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- ============================================
 -- SYSTEM TABLES
 -- ============================================
 
 -- Audit Log
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
     id SERIAL PRIMARY KEY,
     user_id INT,
     action VARCHAR(100) NOT NULL,
@@ -605,12 +696,12 @@ CREATE TABLE audit_log (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE INDEX idx_audit_log_user ON audit_log (user_id);
-CREATE INDEX idx_audit_log_table_record ON audit_log (table_name, record_id);
-CREATE INDEX idx_audit_log_created ON audit_log (created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log (user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_table_record ON audit_log (table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log (created_at);
 
 -- System Settings
-CREATE TABLE system_settings (
+CREATE TABLE IF NOT EXISTS system_settings (
     id SERIAL PRIMARY KEY,
     setting_key VARCHAR(100) NOT NULL UNIQUE,
     setting_value TEXT,
@@ -621,9 +712,13 @@ CREATE TABLE system_settings (
     FOREIGN KEY (updated_by) REFERENCES users (id) ON DELETE SET NULL
 );
 
-CREATE TRIGGER update_system_settings_modtime
-    BEFORE UPDATE ON system_settings
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_system_settings_modtime') THEN
+        CREATE TRIGGER update_system_settings_modtime
+            BEFORE UPDATE ON system_settings
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Insert default system settings
 INSERT INTO system_settings (setting_key, setting_value, description)
@@ -635,7 +730,8 @@ VALUES
     ('school_email', '', 'School email address'),
     ('attendance_notification_enabled', 'true', 'Enable attendance notifications'),
     ('marks_notification_enabled', 'true', 'Enable marks notifications'),
-    ('min_attendance_percentage', '75', 'Minimum required attendance percentage');
+    ('min_attendance_percentage', '75', 'Minimum required attendance percentage')
+ON CONFLICT (setting_key) DO NOTHING;
 
 -- ============================================
 -- VIEWS FOR COMMON QUERIES
@@ -688,19 +784,19 @@ GROUP BY
 -- INDEXES FOR PERFORMANCE
 -- ============================================
 
-CREATE INDEX idx_student_enrollment_current ON student_enrollments (student_id, is_current);
-CREATE INDEX idx_attendance_student_year ON attendance (student_id, attendance_date);
-CREATE INDEX idx_marks_student_year ON internal_marks (student_id, academic_year);
+CREATE INDEX IF NOT EXISTS idx_student_enrollment_current ON student_enrollments (student_id, is_current);
+CREATE INDEX IF NOT EXISTS idx_attendance_student_year ON attendance (student_id, attendance_date);
+CREATE INDEX IF NOT EXISTS idx_marks_student_year ON internal_marks (student_id, academic_year);
 
 -- ============================================
 -- DEFAULT ADMIN USER
 -- ============================================
+-- Note: password hash matches 'admin123'
 INSERT INTO users (username, email, password_hash, role_id, full_name, is_active) 
-VALUES ('admin', 'admin@school.com', '$2a$10$hYDkChqtDRZDZFvB/oIbUOm3Jo6ovp6S2F7bEy0zf5PuDjyvO7PMa', (SELECT id FROM roles WHERE role_name = 'admin' LIMIT 1), 'System Administrator', TRUE)
+VALUES ('admin', 'admin@school.com', '$2a$10$hYDkChqtDRZDZFvB/oIbUOm3Jo6ovp6S2F7bEy0zf5PuDjyvO7PMa', 
+    (SELECT id FROM roles WHERE role_name = 'admin' LIMIT 1), 'System Administrator', TRUE)
 ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;
 
 -- ============================================
 -- END OF SCHEMA
 -- ============================================
--- Add primary_subject column to users table
-ALTER TABLE users ADD COLUMN primary_subject VARCHAR(100);

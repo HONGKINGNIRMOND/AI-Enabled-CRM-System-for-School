@@ -14,7 +14,7 @@ async function runMigration() {
             host: process.env.DB_HOST || 'localhost',
             port: process.env.DB_PORT || 5432,
             user: process.env.DB_USER || 'postgres',
-            password: process.env.DB_PASSWORD || 'your_password_here',
+            password: process.env.DB_PASSWORD || 'root',
             database: process.env.DB_NAME || 'school_crm'
         });
 
@@ -22,7 +22,20 @@ async function runMigration() {
         console.log('✓ Connected to PostgreSQL server');
 
         // Read schema file
-        const schemaPath = path.join(__dirname, '../../database/schema.sql');
+        let schemaPath = path.join(__dirname, '../../../../database/schema.sql');
+
+        // Handle different possible directory structures
+        if (!fs.existsSync(schemaPath)) {
+            const alternativePath = path.join(__dirname, '../../../database/schema.sql');
+            if (fs.existsSync(alternativePath)) {
+                schemaPath = alternativePath;
+            }
+        }
+
+        if (!fs.existsSync(schemaPath)) {
+            throw new Error(`Schema file not found at ${schemaPath}`);
+        }
+
         const schema = fs.readFileSync(schemaPath, 'utf8');
 
         console.log('✓ Schema file loaded');

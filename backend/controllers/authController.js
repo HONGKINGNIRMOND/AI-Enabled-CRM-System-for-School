@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, Role } = require('../models');
 const {
     generateAccessToken,
     generateRefreshToken,
@@ -18,7 +18,7 @@ const register = async (req, res) => {
             });
         }
 
-        const { email, password, name, role } = req.body;
+        const { email, password, name, role: roleName } = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({ where: { email } });
@@ -29,24 +29,34 @@ const register = async (req, res) => {
             });
         }
 
+        // Get role ID
+        const role = await Role.findOne({ where: { roleName: roleName || 'teacher' } });
+        if (!role) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid role: ${roleName}`
+            });
+        }
+
         // Create new user
         const user = await User.create({
+            username: email.split('@')[0], // Default username
             email,
             password,
             name,
-            role: role || 'agent'
+            roleId: role.id
         });
 
         // Generate tokens
-        const accessToken = generateAccessToken(user.id, user.role);
-        const refreshToken = generateRefreshToken(user.id, user.role);
+        const accessToken = generateAccessToken(user.id, role.roleName);
+        const refreshToken = generateRefreshToken(user.id, role.roleName);
 
         // Return user data without password
         const userData = {
             id: user.id,
             email: user.email,
             name: user.name,
-            role: user.role,
+            role: role.roleName,
             createdAt: user.createdAt
         };
 
@@ -71,7 +81,8 @@ const register = async (req, res) => {
         console.error('Registration error:', error);
         res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error',
+            error: error.message
         });
     }
 };
@@ -90,8 +101,12 @@ const login = async (req, res) => {
 
         const { email, password } = req.body;
 
-        // Find user by email
-        const user = await User.findOne({ where: { email } });
+        // Find user by email and include role
+        const user = await User.findOne({ 
+            where: { email },
+            include: [{ model: Role, as: 'role' }]
+        });
+
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -116,16 +131,18 @@ const login = async (req, res) => {
             });
         }
 
+        const roleName = user.role ? user.role.roleName : 'teacher';
+
         // Generate tokens
-        const accessToken = generateAccessToken(user.id, user.role);
-        const refreshToken = generateRefreshToken(user.id, user.role);
+        const accessToken = generateAccessToken(user.id, roleName);
+        const refreshToken = generateRefreshToken(user.id, roleName);
 
         // Return user data without password
         const userData = {
             id: user.id,
             email: user.email,
             name: user.name,
-            role: user.role,
+            role: roleName,
             createdAt: user.createdAt
         };
 

@@ -1,33 +1,34 @@
-// Models temporarily disabled for JSON-based backend
-// const User = require('./User');
-// const Lead = require('./Lead');
-// const Customer = require('./Customer');
-// const Interaction = require('./Interaction');
-// const CallRecord = require('./CallRecord');
+const User = require('./User');
+const Role = require('./Role');
+const Student = require('./Student');
+const Subject = require('./Subject');
+const Mark = require('./Mark');
+const Fee = require('./Fee');
+const AuditLog = require('./AuditLog');
 
 // Define associations
-// User.hasMany(CallRecord, { foreignKey: 'callerId', as: 'callsMade' });
-// CallRecord.belongsTo(User, { foreignKey: 'callerId', as: 'caller' });
+User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
+Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
 
-// User.hasMany(Interaction, { foreignKey: 'userId', as: 'interactions' });
-// Interaction.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+User.hasMany(AuditLog, { foreignKey: 'user_id', as: 'auditLogs', onDelete: 'SET NULL' });
+AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
-// Lead.hasMany(Interaction, { foreignKey: 'leadId', as: 'interactions' });
-// Interaction.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });
+// Add other associations if needed
+Student.hasMany(Mark, { foreignKey: 'student_id', as: 'marks', onDelete: 'CASCADE' });
+Mark.belongsTo(Student, { foreignKey: 'student_id', as: 'student' });
 
-// Customer.hasMany(Interaction, { foreignKey: 'customerId', as: 'interactions' });
-// Interaction.belongsTo(Customer, { foreignKey: 'customerId', as: 'customer' });
+Subject.hasMany(Mark, { foreignKey: 'subject_id', as: 'marks', onDelete: 'CASCADE' });
+Mark.belongsTo(Subject, { foreignKey: 'subject_id', as: 'subject' });
 
-// Lead.hasMany(CallRecord, { foreignKey: 'calleeId', as: 'callsReceived' });
-// CallRecord.belongsTo(Lead, { foreignKey: 'calleeId', as: 'calleeLead', constraints: false });
-
-// Customer.hasMany(CallRecord, { foreignKey: 'calleeCustomerId', as: 'callsReceived' });
-// CallRecord.belongsTo(Customer, { foreignKey: 'calleeCustomerId', as: 'calleeCustomer', constraints: false });
+Student.hasMany(Fee, { foreignKey: 'student_id', as: 'fees', onDelete: 'CASCADE' });
+Fee.belongsTo(Student, { foreignKey: 'student_id', as: 'student' });
 
 module.exports = {
-    // User,
-    // Lead,
-    // Customer,
-    // Interaction,
-    // CallRecord
+    User,
+    Role,
+    Student,
+    Subject,
+    Mark,
+    Fee,
+    AuditLog
 };

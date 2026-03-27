@@ -27,6 +27,8 @@ A comprehensive School Management CRM System designed to streamline academic and
 
 ## Getting Started
 
+> **Deploying to a live domain?** See [DEPLOYMENT.md](./DEPLOYMENT.md) for the full step-by-step guide (VPS, Nginx, SSL, PM2).
+
 ### Prerequisites
 - **Node.js**: v18.x or later
 - **PostgreSQL**: v14.x or later

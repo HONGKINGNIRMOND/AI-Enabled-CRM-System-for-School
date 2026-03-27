@@ -9,9 +9,20 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 
 // CORS configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:5173',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS policy: origin ${origin} not allowed`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
@@ -133,7 +144,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || 'localhost';
+// In production, bind to 0.0.0.0 so Nginx can proxy. In development, bind to localhost.
+const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost');
 
 app.listen(PORT, HOST, () => {
   console.log('\n========================================');
@@ -141,6 +153,7 @@ app.listen(PORT, HOST, () => {
   console.log('========================================');
   console.log(`✓ Server running on http://${HOST}:${PORT}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✓ Allowed origins: ${allowedOrigins.join(', ')}`);
   console.log('========================================');
 });
 

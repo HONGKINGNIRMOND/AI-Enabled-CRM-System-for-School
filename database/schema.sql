@@ -38,6 +38,18 @@ DO $$ BEGIN
     CREATE TYPE notification_status AS ENUM('pending', 'sent', 'failed', 'read');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
+DO $$ BEGIN
+    CREATE TYPE lead_status AS ENUM('new', 'contacted', 'qualified', 'unqualified', 'converted');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE customer_status AS ENUM('active', 'inactive', 'churned', 'prospect');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE interaction_type AS ENUM('call', 'email', 'meeting', 'note', 'sms');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
 -- ============================================
 -- USER MANAGEMENT TABLES
 -- ============================================
@@ -255,6 +267,16 @@ CREATE TABLE IF NOT EXISTS students (
     admission_date TIMESTAMP NOT NULL,
     photo_url VARCHAR(255),
     assigned_teacher_id INTEGER,
+    father_name VARCHAR(255),
+    father_phone VARCHAR(20),
+    father_whatsapp VARCHAR(20),
+    father_email VARCHAR(255),
+    father_occupation VARCHAR(100),
+    mother_name VARCHAR(255),
+    mother_phone VARCHAR(20),
+    mother_whatsapp VARCHAR(20),
+    mother_email VARCHAR(255),
+    mother_occupation VARCHAR(100),
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -272,52 +294,10 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_students_registration ON students (registration_number);
 CREATE INDEX IF NOT EXISTS idx_students_name ON students (first_name, last_name);
 CREATE INDEX IF NOT EXISTS idx_students_active ON students (is_active);
+CREATE INDEX IF NOT EXISTS idx_students_father_whatsapp ON students (father_whatsapp);
+CREATE INDEX IF NOT EXISTS idx_students_mother_whatsapp ON students (mother_whatsapp);
 
--- Parents Table
-CREATE TABLE IF NOT EXISTS parents (
-    id SERIAL PRIMARY KEY,
-    father_name VARCHAR(255),
-    mother_name VARCHAR(255),
-    father_phone VARCHAR(20),
-    mother_phone VARCHAR(20),
-    father_email VARCHAR(255),
-    mother_email VARCHAR(255),
-    father_whatsapp VARCHAR(20),
-    mother_whatsapp VARCHAR(20),
-    father_occupation VARCHAR(100),
-    mother_occupation VARCHAR(100),
-    address TEXT,
-    city VARCHAR(100),
-    state VARCHAR(100),
-    pincode VARCHAR(10),
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
 
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_parents_modtime') THEN
-        CREATE TRIGGER update_parents_modtime
-            BEFORE UPDATE ON parents
-            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-    END IF;
-END $$;
-
-CREATE INDEX IF NOT EXISTS idx_parents_father_whatsapp ON parents(father_whatsapp);
-CREATE INDEX IF NOT EXISTS idx_parents_mother_whatsapp ON parents(mother_whatsapp);
-
--- Student-Parents Junction Table
-CREATE TABLE IF NOT EXISTS student_parents (
-    id SERIAL PRIMARY KEY,
-    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
-    parent_id INTEGER REFERENCES parents(id) ON DELETE CASCADE,
-    relationship VARCHAR(50),
-    is_primary_contact BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(student_id, parent_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_student_parents_student_id ON student_parents(student_id);
-CREATE INDEX IF NOT EXISTS idx_student_parents_parent_id ON student_parents(parent_id);
 
 -- Student Enrollments
 CREATE TABLE IF NOT EXISTS student_enrollments (
@@ -732,6 +712,96 @@ VALUES
     ('marks_notification_enabled', 'true', 'Enable marks notifications'),
     ('min_attendance_percentage', '75', 'Minimum required attendance percentage')
 ON CONFLICT (setting_key) DO NOTHING;
+
+-- ============================================
+-- CRM TABLES (LEADS, CUSTOMERS, INTERACTIONS)
+-- ============================================
+
+-- Leads Table
+CREATE TABLE IF NOT EXISTS leads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(20),
+    company VARCHAR(100),
+    status lead_status DEFAULT 'new',
+    assigned_agent INT,
+    source VARCHAR(100) DEFAULT 'Manual',
+    notes TEXT,
+    score INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (assigned_agent) REFERENCES users (id) ON DELETE SET NULL
+);
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_leads_modtime') THEN
+        CREATE TRIGGER update_leads_modtime
+            BEFORE UPDATE ON leads
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads (status);
+CREATE INDEX IF NOT EXISTS idx_leads_assigned ON leads (assigned_agent);
+CREATE INDEX IF NOT EXISTS idx_leads_name ON leads (name);
+
+-- Customers Table
+CREATE TABLE IF NOT EXISTS customers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE,
+    phone VARCHAR(20),
+    company VARCHAR(100),
+    status customer_status DEFAULT 'active',
+    lead_source VARCHAR(100),
+    lifetime_value DECIMAL(10, 2) DEFAULT 0.00,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_customers_modtime') THEN
+        CREATE TRIGGER update_customers_modtime
+            BEFORE UPDATE ON customers
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers (email);
+CREATE INDEX IF NOT EXISTS idx_customers_status ON customers (status);
+
+-- Interactions Table
+CREATE TABLE IF NOT EXISTS interactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id UUID,
+    lead_id UUID,
+    type interaction_type NOT NULL,
+    notes TEXT,
+    outcome VARCHAR(255),
+    next_action VARCHAR(255),
+    user_id INT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE,
+    FOREIGN KEY (lead_id) REFERENCES leads (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_interactions_modtime') THEN
+        CREATE TRIGGER update_interactions_modtime
+            BEFORE UPDATE ON interactions
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_interactions_customer ON interactions (customer_id);
+CREATE INDEX IF NOT EXISTS idx_interactions_lead ON interactions (lead_id);
+CREATE INDEX IF NOT EXISTS idx_interactions_user ON interactions (user_id);
+CREATE INDEX IF NOT EXISTS idx_interactions_timestamp ON interactions (timestamp);
 
 -- ============================================
 -- VIEWS FOR COMMON QUERIES

@@ -9,7 +9,7 @@
     "test": "jest --coverage",
     "migrate": "node database/migrations/migrate.js",
     "create-users": "node database/seeds/createUsers.js",
-    "setup": "npm run migrate && npm run create-users"
+    "setup": "npm run migrate && node database/seeds/createClasses.js && node database/seeds/resetSubjects.js && node database/seeds/resetExamTypes.js && npm run create-users"
   },
   "keywords": [
     "school",

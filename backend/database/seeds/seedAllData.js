@@ -96,8 +96,14 @@ async function main() {
     }
 
     // 4. Classes & Sections
-    const classes = await query('SELECT id, class_name FROM classes WHERE is_active = TRUE LIMIT 3');
-    if (classes.length === 0) throw new Error('No classes found. Seed classes first.');
+    let classes = await query('SELECT id, class_name FROM classes WHERE is_active = TRUE LIMIT 3');
+    if (classes.length === 0) {
+        console.log('⚠️ No classes found. Automatically seeding default classes...');
+        const createClasses = require('./createClasses');
+        await createClasses();
+        classes = await query('SELECT id, class_name FROM classes WHERE is_active = TRUE LIMIT 3');
+        if (classes.length === 0) throw new Error('Failed to seed classes. Cannot continue.');
+    }
 
     // 5. Students & Enrollments
     console.log('🎓 Seeding Students...');

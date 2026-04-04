@@ -13,6 +13,7 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:3000',
   'http://localhost:5173',
+  'https://crm-school.up.railway.app',
 ].filter(Boolean);
 
 app.use(cors({

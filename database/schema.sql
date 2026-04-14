@@ -862,10 +862,7 @@ CREATE INDEX IF NOT EXISTS idx_marks_student_year ON internal_marks (student_id,
 -- DEFAULT ADMIN USER
 -- ============================================
 -- Note: password hash matches 'admin123'
-INSERT INTO users (username, email, password_hash, role_id, full_name, is_active) 
-VALUES ('admin', 'admin@school.com', '$2a$10$hYDkChqtDRZDZFvB/oIbUOm3Jo6ovp6S2F7bEy0zf5PuDjyvO7PMa', 
-    (SELECT id FROM roles WHERE role_name = 'admin' LIMIT 1), 'System Administrator', TRUE)
-ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;
+
 
 -- ============================================
 -- END OF SCHEMA

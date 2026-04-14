@@ -7,6 +7,9 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const ExcelJS = require('exceljs');
 
+const moment = require('moment');
+const { refreshAttendanceSummary } = require('../utils/attendanceUtils');
+
 // Configure multer for file uploads
 const upload = multer({
     dest: 'backend/uploads/',
@@ -28,6 +31,8 @@ router.post('/', async (req, res) => {
       DO UPDATE SET status = EXCLUDED.status, marked_by = EXCLUDED.marked_by, remarks = EXCLUDED.remarks`,
             [student_id, class_id, section_id, attendance_date, status, marked_by, remarks, session]
         );
+
+        await refreshAttendanceSummary(student_id, attendance_date);
 
         res.json({
             success: true,
@@ -60,6 +65,11 @@ router.post('/bulk', async (req, res) => {
                 );
             }
         });
+
+        // Update summaries for all students affected
+        for (const record of attendance_records) {
+            await refreshAttendanceSummary(record.student_id, attendance_date);
+        }
 
         res.json({
             success: true,
@@ -366,6 +376,9 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
                     );
 
                 });
+                // Update summary
+                await refreshAttendanceSummary(student.id, record.date);
+
                 successCount++;
             } catch (error) {
                 failCount++;

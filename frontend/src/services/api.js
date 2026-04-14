@@ -4,10 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 // Create axios instance
 const api = axios.create({
-    baseURL: API_BASE_URL,
-    headers: {
-        'Content-Type': 'application/json'
-    }
+    baseURL: API_BASE_URL
 });
 
 // Request interceptor to add auth token
@@ -59,9 +56,7 @@ export const studentsAPI = {
     bulkUpload: (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        return api.post('/students/bulk-upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        return api.post('/students/bulk-upload', formData);
     }
 };
 
@@ -72,9 +67,7 @@ export const attendanceAPI = {
     bulkUpload: (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        return api.post('/attendance/bulk-upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        return api.post('/attendance/bulk-upload', formData);
     },
     getByStudent: (id, params) => api.get(`/attendance/student/${id}`, { params }),
     getByClass: (classId, sectionId, params) =>
@@ -91,9 +84,7 @@ export const marksAPI = {
         formData.append('class_subject_id', classSubjectId);
         formData.append('exam_type_id', examTypeId);
         formData.append('academic_year', academicYear);
-        return api.post('/marks/bulk-upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        return api.post('/marks/bulk-upload', formData);
     },
     getByStudent: (id, params) => api.get(`/marks/student/${id}`, { params }),
     getByClass: (classId, subjectId, examId, params) =>
@@ -106,7 +97,8 @@ export const gradesAPI = {
     calculate: (academicYear) => api.post('/grades/calculate', { academic_year: academicYear }),
     calculateStudent: (studentId, classSubjectId, academicYear) =>
         api.post(`/grades/calculate/${studentId}/${classSubjectId}`, { academic_year: academicYear }),
-    getByStudent: (id, params) => api.get(`/grades/student/${id}`, { params })
+    getByStudent: (id, params) => api.get(`/grades/student/${id}`, { params }),
+    getRules: () => api.get('/grades/rules')
 };
 
 // Reports API
@@ -114,7 +106,9 @@ export const reportsAPI = {
     getProgressCard: (studentId, params) => api.get(`/reports/progress-card/${studentId}`, { params }),
     getClassPerformance: (classId, params) => api.get(`/reports/class-performance/${classId}`, { params }),
     getAttendanceSummary: (params) => api.get('/reports/attendance-summary', { params }),
-    getAcademicAnalytics: (params) => api.get('/reports/academic-analytics', { params })
+    getAcademicAnalytics: (params) => api.get('/reports/academic-analytics', { params }),
+    getStudentAnalytics: (params) => api.get('/reports/student-analytics', { params }),
+    exportStudentAnalytics: (params) => api.get('/reports/student-analytics/export', { params, responseType: 'blob' })
 };
 
 // Master Data API
@@ -134,9 +128,7 @@ export const teachersAPI = {
     bulkUpload: (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        return api.post('/teachers/bulk', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        return api.post('/teachers/bulk', formData);
     },
     update: (id, data) => api.put(`/teachers/${id}`, data),
     getAssignments: () => api.get('/teachers/assignments'),
@@ -161,9 +153,7 @@ export const leadsAPI = {
     bulkUpload: (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        return api.post('/leads/bulk-upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        return api.post('/leads/bulk-upload', formData);
     }
 };
 
@@ -198,9 +188,7 @@ export const circularsAPI = {
                 formData.append('files', file);
             });
         }
-        return api.post('/circulars', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        return api.post('/circulars', formData);
     },
     delete: (id) => api.delete(`/circulars/${id}`),
     previewRecipients: (data) => api.post('/circulars/preview-recipients', data)

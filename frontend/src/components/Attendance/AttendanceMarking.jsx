@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Save, RefreshCw, Check, X as CloseIcon, Upload } from 'lucide-react';
+import { ArrowLeft, Calendar, Save, RefreshCw, Check, X as CloseIcon, Upload, Download } from 'lucide-react';
 import { attendanceAPI, masterAPI } from '../../services/api';
 import BulkUploadModal from '../common/BulkUploadModal';
 
@@ -83,7 +83,8 @@ const AttendanceMarking = () => {
                     student_id: record.id,
                     roll_number: record.roll_number,
                     student_name: record.student_name,
-                    status: record.status || 'Present'
+                    status: record.status || 'Present',
+                    remarks: record.remarks || ''
                 }));
             setStudents(records);
         } catch (error) {
@@ -145,6 +146,37 @@ const AttendanceMarking = () => {
             setSaving(false);
         }
     }, [students, classId, sectionId, date, session]);
+
+    const handleExportCSV = () => {
+        if (students.length === 0) return;
+
+        const headers = ['Roll Number', 'Student Name', 'Status', 'Date', 'Session', 'Remarks'];
+        const csvData = students.map(s => [
+            `"${s.roll_number || ''}"`,
+            `"${s.student_name}"`,
+            `"${s.status}"`,
+            `"${date}"`,
+            `"${session}"`,
+            `"${s.remarks || ''}"`
+        ]);
+
+        const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        // Format filename
+        const className = classes.find(c => c.id == classId)?.class_name || 'Class';
+        const sectionName = sections.find(s => s.id == sectionId)?.section_name || 'Section';
+        const fileName = `Attendance_${className}_${sectionName}_${date}_${session}.csv`.replace(/\s+/g, '_');
+
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     // Memoized Row Component
     const StudentAttendanceRow = React.memo(({ student, onStatusChange }) => {
@@ -234,13 +266,23 @@ const AttendanceMarking = () => {
                         <div className="flex items-center gap-4">
                             <h1 className="text-2xl font-bold text-gray-900">Mark Attendance</h1>
                         </div>
-                        <button
-                            onClick={() => setShowBulkModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                        >
-                            <Upload className="w-4 h-4" />
-                            Bulk Upload
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleExportCSV}
+                                disabled={students.length === 0}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                            >
+                                <Download className="w-4 h-4" />
+                                Export CSV
+                            </button>
+                            <button
+                                onClick={() => setShowBulkModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                            >
+                                <Upload className="w-4 h-4" />
+                                Bulk Upload
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>

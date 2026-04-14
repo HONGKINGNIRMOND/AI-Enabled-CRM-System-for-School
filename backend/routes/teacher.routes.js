@@ -36,8 +36,22 @@ const parseDateString = (dateStr) => {
 };
 
 
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'teachers-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
 const upload = multer({
-    dest: 'uploads/',
+    storage,
     limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760 }
 });
 
@@ -286,7 +300,7 @@ router.post('/bulk', authenticateToken, authorize('admin', 'hod'), upload.single
             for (const teacher of validTeachers) {
                 try {
                     await transaction(async (conn) => {
-                        const { username, email, password, full_name, phone, gender, date_of_birth, address, city, state, pincode, joining_date } = teacher;
+                        const { username, email, password, full_name, phone, gender, date_of_birth, address, city, state, pincode, joining_date, primary_subject } = teacher;
 
                         // Check if email or username exists
                         const existing = await conn.query(
@@ -295,12 +309,7 @@ router.post('/bulk', authenticateToken, authorize('admin', 'hod'), upload.single
                         );
 
                         if (existing.length > 0) {
-                            failCount++;
-                            errors.push({
-                                username,
-                                error: 'Email or Username already exists'
-                            });
-                            return;
+                            throw new Error('Email or Username already exists');
                         }
 
                         // Hash password

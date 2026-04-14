@@ -21,17 +21,27 @@ const getInitialUser = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(getInitialUser);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // Validate token on mount if user exists
         const currentUser = getInitialUser();
         if (currentUser) {
-            authAPI.getProfile().catch(() => {
-                // Token is invalid, clear auth state
-                localStorage.removeItem('user');
-                localStorage.removeItem('accessToken');
-                setUser(null);
-            });
+            authAPI.getProfile()
+                .then((response) => {
+                    setUser(response.data.data.user);
+                })
+                .catch(() => {
+                    // Token is invalid, clear auth state
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('accessToken');
+                    setUser(null);
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        } else {
+            setLoading(false);
         }
     }, []);
 
@@ -61,6 +71,7 @@ export const AuthProvider = ({ children }) => {
 
     const value = {
         user,
+        loading,
         login,
         logout,
         isAuthenticated: !!user

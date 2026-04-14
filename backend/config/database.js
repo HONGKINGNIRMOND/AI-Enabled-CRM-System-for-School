@@ -3,39 +3,69 @@ const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
 // PostgreSQL connection pool configuration for raw queries
+const poolConfig = process.env.DATABASE_URL 
+  ? { 
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    }
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'root',
+      database: process.env.DB_NAME || 'school_crm',
+    };
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'root',
-  database: process.env.DB_NAME || 'school_crm',
+  ...poolConfig,
   max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX) : 100,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
 
 // Sequelize initialization
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'school_crm',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || 'root',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
-      max: parseInt(process.env.DB_POOL_MAX) || 10,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    },
-    define: {
-      timestamps: true,
-      underscored: true // Use snake_case for automatically added fields
-    }
-  }
-);
+const sequelize = process.env.DATABASE_URL
+  ? new Sequelize(process.env.DATABASE_URL, {
+      dialect: 'postgres',
+      dialectOptions: {
+        ssl: process.env.NODE_ENV === 'production' ? {
+          require: true,
+          rejectUnauthorized: false
+        } : false
+      },
+      logging: process.env.NODE_ENV === 'development' ? console.log : false,
+      pool: {
+        max: parseInt(process.env.DB_POOL_MAX) || 10,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      },
+      define: {
+        timestamps: true,
+        underscored: true
+      }
+    })
+  : new Sequelize(
+      process.env.DB_NAME || 'school_crm',
+      process.env.DB_USER || 'postgres',
+      process.env.DB_PASSWORD || 'root',
+      {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 5432,
+        dialect: 'postgres',
+        logging: process.env.NODE_ENV === 'development' ? console.log : false,
+        pool: {
+          max: parseInt(process.env.DB_POOL_MAX) || 10,
+          min: 0,
+          acquire: 30000,
+          idle: 10000
+        },
+        define: {
+          timestamps: true,
+          underscored: true
+        }
+      }
+    );
 
 // Test database connection
 async function testConnection() {

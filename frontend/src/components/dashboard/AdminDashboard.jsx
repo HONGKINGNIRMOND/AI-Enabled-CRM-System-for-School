@@ -462,6 +462,10 @@ const AdminDashboard = () => {
                                 <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600"><Send className="w-5 h-5" /></div>
                                 <span className="font-medium text-gray-700">E-Circulars (Teachers)</span>
                             </Link>
+                            <Link to="/reports/student-analytics" className="p-4 bg-white border border-gray-100 rounded-xl hover:shadow-md transition flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Activity className="w-5 h-5" /></div>
+                                <span className="font-medium text-gray-700">Student Analytics</span>
+                            </Link>
                         </div>
 
                         {/* Recent Circulars Dashboard Panel */}

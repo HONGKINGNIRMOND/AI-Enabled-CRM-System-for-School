@@ -92,4 +92,24 @@ router.get('/student/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// Get all grading rules
+router.get('/rules', authenticateToken, async (req, res) => {
+    try {
+        const rules = await query(
+            'SELECT * FROM grading_rules ORDER BY min_percentage DESC'
+        );
+        res.json({
+            success: true,
+            data: rules
+        });
+    } catch (error) {
+        console.error('Get grading rules error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch grading rules'
+        });
+    }
+});
+
 module.exports = router;
+

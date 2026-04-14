@@ -6,8 +6,10 @@ A comprehensive School Management CRM System designed to streamline academic and
 - **Omnichannel Communication**: Integrated alerts via Email, SMS, WhatsApp, and Voice calls.
 - **Circulars Broadcasting**: System-wide announcements with file attachments (PDF, Excel, Word docs up to 50MB).
 - **HOD Analytics Dashboard**: Comprehensive academic insights, pass rates, and performance distribution for Head of Departments.
-- **Bulk Data Management**: Support for high-speed student and data uploads via CSV/Excel.
-- **High-Performance Architecture**: Optimized with compression, connection pooling, and PM2 clustering to handle 500+ concurrent requests.
+- **Detailed Student Analytics**: Multi-subject performance comparison, automated attendance summary aggregation, and advanced filtering.
+- **Dynamic Reporting**: One-click PDF progress cards and Excel/CSV exports for attendance and academic results.
+- **Bulk Data Management**: Robust CSV/Excel processing for student enrollment, attendance marking, and marks entry.
+- **High-Performance Architecture**: Optimized with PostgreSQL connection pooling, JSONB for dynamic subject data, and PM2 clustering.
 - **AI-Powered Analytics**: Performance prediction and audio processing via Whisper.
 - **Secure Authentication**: Role-based access control with JWT-secured endpoints.
 
@@ -27,7 +29,7 @@ A comprehensive School Management CRM System designed to streamline academic and
 
 ## Getting Started
 
-> **Deploying to a live domain?** See [DEPLOYMENT.md](./DEPLOYMENT.md) for the full step-by-step guide (VPS, Nginx, SSL, PM2).
+> **Deploying to a live domain?** See [DEPLOYMENT.md](./DEPLOYMENT.md) for the full step-by-step guide (VPS, Railway, Nginx, SSL, PM2).
 
 ### Prerequisites
 - **Node.js**: v18.x or later
@@ -104,3 +106,12 @@ Once the project is running, you can log in with the default admin account:
 - **Students**: Upload via `dummy.csv` or Excel template.
 - **Templates**: Available in `backend/public/templates/`.
 - **Primary Subject**: Support for teacher-subject association.
+
+## Technical Notes & Maintenance
+- **Attendance Summaries**: Monthly attendance statistics are automatically synchronized upon marking. To manually refresh summaries for all historical data, run:
+  ```bash
+  cd backend
+  node tools/backfillAttendanceSummary.js
+  ```
+- **Analytics Precision**: Academic reports use weighted averages (Total Present / Total Possible Days) to ensure mathematical accuracy across different months.
+- **Reporting**: PDF generation uses `pdfkit` and Excel exports use `exceljs`, both optimized for low memory overhead.

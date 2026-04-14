@@ -1,16 +1,16 @@
-Roll Number,Student Name,Subject,Exam Type,Marks,Max Marks,Grade
-25001,Aarav Sharma,Mathematics,Unit Test 1,88,100,A+
-25001,Aarav Sharma,Science,Unit Test 1,75,100,B+
-25001,Aarav Sharma,English,Unit Test 1,91,100,A+
-25002,Priya Verma,Mathematics,Unit Test 1,82,100,A
-25002,Priya Verma,Science,Unit Test 1,94,100,A+
-25002,Priya Verma,English,Unit Test 1,87,100,A+
-25003,Rohan Patel,Mathematics,Unit Test 1,70,100,B
-25003,Rohan Patel,Science,Unit Test 1,68,100,B
-25003,Rohan Patel,English,Unit Test 1,79,100,B+
-25004,Anjali Singh,Mathematics,Unit Test 1,95,100,A+
-25004,Anjali Singh,Science,Unit Test 1,88,100,A+
-25004,Anjali Singh,English,Unit Test 1,90,100,A+
-25005,Ishaan Kumar,Mathematics,Unit Test 1,73,100,B+
-25005,Ishaan Kumar,Science,Unit Test 1,81,100,A
-25005,Ishaan Kumar,English,Unit Test 1,77,100,B+
+Roll Number,Student Name,Subject,Exam Type,Marks,Max Marks,Grade,Remarks
+25001,Aarav Sharma,Mathematics,Unit Test 1,88,100,A+,Good progress
+25001,Aarav Sharma,Science,Unit Test 1,75,100,B+,Needs improvement in lab
+25001,Aarav Sharma,English,Unit Test 1,91,100,A+,Excellent vocabulary
+25002,Priya Verma,Mathematics,Unit Test 1,82,100,A,Consistent performance
+25002,Priya Verma,Science,Unit Test 1,94,100,A+,Outstanding
+25002,Priya Verma,English,Unit Test 1,87,100,A+,Very active in class
+25003,Rohan Patel,Mathematics,Unit Test 1,70,100,B,Hardworking
+25003,Rohan Patel,Science,Unit Test 1,68,100,B,Satisfactory
+25003,Rohan Patel,English,Unit Test 1,79,100,B+,Improving
+25004,Anjali Singh,Mathematics,Unit Test 1,95,100,A+,Brilliant
+25004,Anjali Singh,Science,Unit Test 1,88,100,A+,Focused
+25004,Anjali Singh,English,Unit Test 1,90,100,A+,Well spoken
+25005,Ishaan Kumar,Mathematics,Unit Test 1,73,100,B+,Regular
+25005,Ishaan Kumar,Science,Unit Test 1,81,100,A,Good understanding
+25005,Ishaan Kumar,English,Unit Test 1,77,100,B+,Can do better

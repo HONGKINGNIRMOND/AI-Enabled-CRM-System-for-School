@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import DateTimeDisplay from '../common/DateTimeDisplay';
 import CircularNotificationBell from '../common/CircularNotificationBell';
 import DashboardCircularsPanel from '../common/DashboardCircularsPanel';
-import { Calendar, BookOpen, Users, LogOut } from 'lucide-react';
+import { Calendar, BookOpen, Users, LogOut, Activity } from 'lucide-react';
 
 const TeacherDashboard = () => {
     const { user, logout } = useAuth();
@@ -70,6 +70,15 @@ const TeacherDashboard = () => {
                         <Users className="w-12 h-12 text-orange-600 mb-4" />
                         <h3 className="text-xl font-bold text-gray-800">Quick Action</h3>
                         <p className="text-gray-600 mt-2">Search students and send updates</p>
+                    </Link>
+
+                    <Link
+                        to="/reports/student-analytics"
+                        className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
+                    >
+                        <Activity className="w-12 h-12 text-indigo-600 mb-4" />
+                        <h3 className="text-xl font-bold text-gray-800">Student Analytics</h3>
+                        <p className="text-gray-600 mt-2">Detailed performance analysis</p>
                     </Link>
                 </div>
 

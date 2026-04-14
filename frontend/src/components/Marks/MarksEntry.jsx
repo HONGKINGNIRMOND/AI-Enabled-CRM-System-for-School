@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Upload, RefreshCw, Check, AlertCircle, X as CloseIcon } from 'lucide-react';
+import { ArrowLeft, Save, Upload, RefreshCw, Check, AlertCircle, Download, X as CloseIcon } from 'lucide-react';
 import { marksAPI, gradesAPI, masterAPI } from '../../services/api';
 import BulkUploadModal from '../common/BulkUploadModal';
 
 // Memoized Row Component
-const StudentMarkRow = React.memo(({ student, onMarkChange }) => {
+const StudentMarkRow = React.memo(({ student, onMarkChange, isSelected, onToggleSelection, getGrade }) => {
     return (
-        <tr className="hover:bg-blue-50/30 transition-colors">
+        <tr className={`hover:bg-blue-50/30 transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`} onClick={() => onToggleSelection(student.student_id)}>
+            <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
+                <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleSelection(student.student_id)}
+                    className="w-5 h-5 rounded-lg border-gray-200 text-blue-600 focus:ring-blue-100 transition-all cursor-pointer"
+                />
+            </td>
             <td className="py-4 px-6">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-700 font-bold">
@@ -32,6 +40,17 @@ const StudentMarkRow = React.memo(({ student, onMarkChange }) => {
                 </div>
             </td>
             <td className="py-4 px-6 text-center">
+                <span className={`inline-flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm ${
+                    student.is_absent ? 'bg-gray-100 text-gray-400' :
+                    getGrade(student.marks_obtained, student.max_marks).includes('A') ? 'bg-green-100 text-green-700' :
+                    getGrade(student.marks_obtained, student.max_marks).includes('B') ? 'bg-blue-100 text-blue-700' :
+                    getGrade(student.marks_obtained, student.max_marks).includes('F') ? 'bg-red-100 text-red-700' :
+                    'bg-yellow-100 text-yellow-700'
+                }`}>
+                    {student.is_absent ? 'ABS' : getGrade(student.marks_obtained, student.max_marks)}
+                </span>
+            </td>
+            <td className="py-4 px-6 text-center">
                 <input
                     type="checkbox"
                     checked={student.is_absent}
@@ -53,20 +72,43 @@ const StudentMarkRow = React.memo(({ student, onMarkChange }) => {
 });
 
 // Memoized Card Component for Mobile
-const StudentMarkCard = React.memo(({ student, onMarkChange }) => {
+const StudentMarkCard = React.memo(({ student, onMarkChange, isSelected, onToggleSelection, getGrade }) => {
     return (
-        <div className={`bg-white border rounded-2xl p-5 shadow-sm transition-all ${student.is_absent ? 'border-red-100 bg-red-50/10' : 'border-gray-100'}`}>
+        <div 
+            className={`bg-white border rounded-2xl p-5 shadow-sm transition-all ${student.is_absent ? 'border-red-100 bg-red-50/10' : 'border-gray-100'} ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50/10' : ''}`}
+            onClick={() => onToggleSelection(student.student_id)}
+        >
             <div className="flex items-center gap-4 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 font-bold text-lg">
-                    {student.student_name.charAt(0)}
-                </div>
-                <div className="flex-1">
-                    <p className="font-bold text-gray-900">{student.student_name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-gray-400">Roll: {student.roll_number}</span>
+                <div className="flex items-center gap-3 flex-1">
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelection(student.student_id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-5 h-5 rounded-lg border-gray-200 text-blue-600 focus:ring-blue-100 transition-all cursor-pointer"
+                    />
+                    <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 font-bold text-lg">
+                        {student.student_name.charAt(0)}
+                    </div>
+                    <div>
+                        <p className="font-bold text-gray-900">{student.student_name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-gray-400">Roll: {student.roll_number}</span>
+                        </div>
                     </div>
                 </div>
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Grade</span>
+                    <span className={`text-lg font-black ${
+                        student.is_absent ? 'text-gray-300' :
+                        getGrade(student.marks_obtained, student.max_marks).includes('A') ? 'text-green-600' :
+                        getGrade(student.marks_obtained, student.max_marks).includes('F') ? 'text-red-500' :
+                        'text-blue-600'
+                    }`}>
+                        {student.is_absent ? '-' : getGrade(student.marks_obtained, student.max_marks)}
+                    </span>
+                </div>
+                <div className="flex flex-col items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Absent</span>
                     <input
                         type="checkbox"
@@ -77,7 +119,7 @@ const StudentMarkCard = React.memo(({ student, onMarkChange }) => {
                 </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
                 <div>
                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 ml-1">Marks Obtained</label>
                     <div className="relative">
@@ -118,12 +160,14 @@ const MarksEntry = () => {
     const [subjects, setSubjects] = useState([]);
     const [exams, setExams] = useState([]);
     const [students, setStudents] = useState([]);
+    const [selectedStudents, setSelectedStudents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [calculating, setCalculating] = useState(false);
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [message, setMessage] = useState(null);
     const [classSubjectId, setClassSubjectId] = useState(null);
+    const [gradingRules, setGradingRules] = useState([]);
 
     useEffect(() => {
         fetchMasterData();
@@ -131,12 +175,14 @@ const MarksEntry = () => {
 
     const fetchMasterData = async () => {
         try {
-            const [classesRes, examsRes] = await Promise.all([
+            const [classesRes, examsRes, rulesRes] = await Promise.all([
                 masterAPI.getClasses(),
-                masterAPI.getExamTypes()
+                masterAPI.getExamTypes(),
+                gradesAPI.getRules()
             ]);
             setClasses(classesRes.data.data);
             setExams(examsRes.data.data);
+            setGradingRules(rulesRes.data.data || []);
         } catch (error) {
             console.error('Failed to fetch master data:', error);
         }
@@ -198,6 +244,7 @@ const MarksEntry = () => {
                 remarks: record.remarks || ''
             }));
             setStudents(records);
+            setSelectedStudents([]); // Reset selection on new data
         } catch (error) {
             console.error('Failed to fetch marks:', error);
             setMessage({ type: 'error', text: 'Failed to load students. Please ensure subject is assigned to class.' });
@@ -211,6 +258,70 @@ const MarksEntry = () => {
             s.student_id === studentId ? { ...s, [field]: value } : s
         ));
     }, []);
+
+    const getGrade = React.useCallback((obtained, max) => {
+        if (obtained === '' || obtained === null || obtained === undefined) return '-';
+        const marksObtained = parseFloat(obtained);
+        const marksMax = parseFloat(max);
+        if (isNaN(marksObtained) || isNaN(marksMax) || marksMax === 0) return '-';
+        
+        const percentage = (marksObtained / marksMax) * 100;
+        const rule = gradingRules.find(r => percentage >= parseFloat(r.min_percentage) && percentage <= parseFloat(r.max_percentage));
+        return rule ? rule.grade_name : (percentage >= 35 ? 'D' : 'F');
+    }, [gradingRules]);
+
+    const handleSelectStudent = React.useCallback((studentId) => {
+        setSelectedStudents(prev => 
+            prev.includes(studentId) 
+                ? prev.filter(id => id !== studentId) 
+                : [...prev, studentId]
+        );
+    }, []);
+
+    const handleSelectAll = React.useCallback(() => {
+        if (selectedStudents.length === students.length && students.length > 0) {
+            setSelectedStudents([]);
+        } else {
+            setSelectedStudents(students.map(s => s.student_id));
+        }
+    }, [selectedStudents, students]);
+
+    const handleExportCSV = React.useCallback(() => {
+        if (selectedStudents.length === 0) return;
+
+        const selectedData = students.filter(s => selectedStudents.includes(s.student_id));
+        
+        // CSV Headers
+        const headers = ['Student Name', 'Roll Number', 'Marks Obtained', 'Max Marks', 'Absent Status', 'Remarks'];
+        
+        // Map data to rows
+        const csvRows = selectedData.map(s => [
+            `"${s.student_name}"`,
+            `"${s.roll_number}"`,
+            s.is_absent ? '0' : (s.marks_obtained || '0'),
+            s.max_marks,
+            s.is_absent ? 'Yes' : 'No',
+            `"${(s.remarks || '').replace(/"/g, '""')}"`
+        ]);
+
+        // Combine
+        const csvContent = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\n');
+        
+        // Download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.body.appendChild(document.createElement('a'));
+        
+        // Filename based on filters if possible
+        const className = classes.find(c => c.id.toString() === classId.toString())?.class_name || 'Class';
+        const subjectName = subjects.find(s => s.id.toString() === subjectId.toString())?.subject_name || 'Subject';
+        const fileName = `Marks_${className}_${subjectName}_${academicYear}.csv`.replace(/\s+/g, '_');
+
+        link.href = url;
+        link.setAttribute('download', fileName);
+        link.click();
+        document.body.removeChild(link);
+    }, [selectedStudents, students, classes, classId, subjects, subjectId, academicYear]);
 
     const handleSave = React.useCallback(async () => {
         if (students.length === 0) return;
@@ -302,8 +413,17 @@ const MarksEntry = () => {
                         <div className="flex items-center gap-4">
                             <h1 className="text-2xl font-bold text-gray-900">Enter Marks</h1>
                         </div>
-                        <button
-                            onClick={() => {
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleExportCSV}
+                                disabled={selectedStudents.length === 0}
+                                className={`flex items-center gap-2 px-4 py-2 border-2 border-gray-900 text-gray-900 rounded-lg transition font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50`}
+                            >
+                                <Download className="w-4 h-4" />
+                                {selectedStudents.length > 0 ? `Export (${selectedStudents.length})` : 'Export CSV'}
+                            </button>
+                            <button
+                                onClick={() => {
                                 if (!classSubjectId || !examId) {
                                     setMessage({
                                         type: 'error',
@@ -323,7 +443,8 @@ const MarksEntry = () => {
                         </button>
                     </div>
                 </div>
-            </header>
+            </div>
+        </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="bg-white rounded-xl shadow-lg p-6">
@@ -435,8 +556,17 @@ const MarksEntry = () => {
                                     <table className="w-full">
                                         <thead className="bg-gray-50/50">
                                             <tr>
+                                                <th className="py-4 px-6 text-left w-16">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={students.length > 0 && selectedStudents.length === students.length}
+                                                        onChange={handleSelectAll}
+                                                        className="w-5 h-5 rounded-lg border-gray-200 text-blue-600 focus:ring-blue-100 transition-all cursor-pointer"
+                                                    />
+                                                </th>
                                                 <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Student</th>
                                                 <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest w-40">Marks Obtained</th>
+                                                <th className="text-center py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest w-20">Grade</th>
                                                 <th className="text-center py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest w-24">Absent</th>
                                                 <th className="text-left py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-widest">Remarks</th>
                                             </tr>
@@ -447,6 +577,9 @@ const MarksEntry = () => {
                                                     key={student.student_id}
                                                     student={student}
                                                     onMarkChange={handleMarkChange}
+                                                    isSelected={selectedStudents.includes(student.student_id)}
+                                                    onToggleSelection={handleSelectStudent}
+                                                    getGrade={getGrade}
                                                 />
                                             ))}
                                         </tbody>
@@ -460,6 +593,9 @@ const MarksEntry = () => {
                                             key={student.student_id}
                                             student={student}
                                             onMarkChange={handleMarkChange}
+                                            isSelected={selectedStudents.includes(student.student_id)}
+                                            onToggleSelection={handleSelectStudent}
+                                            getGrade={getGrade}
                                         />
                                     ))}
                                 </div>

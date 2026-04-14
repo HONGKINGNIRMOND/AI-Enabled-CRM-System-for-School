@@ -21,6 +21,7 @@ import ClassFeeStructure from './components/Fees/ClassFeeStructure';
 import AIPredictions from './components/AI/AIPredictions';
 import QuickActionPanel from './components/quick-action/QuickActionPanel';
 import Circulars from './components/Circulars/Circulars';
+import StudentAnalyticsReport from './components/Reports/StudentAnalyticsReport';
 import './App.css';
 
 // Protected Route Component
@@ -176,11 +177,21 @@ function App() {
             }
           />
 
+
           <Route
             path="/reports"
             element={
               <ProtectedRoute>
                 <Reports />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports/student-analytics"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'hod']}>
+                <StudentAnalyticsReport />
               </ProtectedRoute>
             }
           />

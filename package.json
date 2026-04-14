@@ -1,0 +1,20 @@
+{
+  "name": "school-crm-prototype",
+  "version": "1.0.0",
+  "description": "School Management CRM System - Root Workspace",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "migrate": "cd backend && npm run migrate",
+    "setup": "cd backend && npm run setup",
+    "start": "cd backend && npm start",
+    "start:prod": "cd backend && npm run start:prod"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -10,16 +10,23 @@ async function runMigration() {
         console.log('🔄 Starting database migration (PostgreSQL)...\n');
 
         // Connect to PostgreSQL
-        client = new Client({
-            host: process.env.DB_HOST || 'localhost',
-            port: process.env.DB_PORT || 5432,
-            user: process.env.DB_USER || 'postgres',
-            password: process.env.DB_PASSWORD || 'root',
-            database: process.env.DB_NAME || 'school_crm'
-        });
+        const connectionConfig = process.env.DATABASE_URL
+            ? { 
+                connectionString: process.env.DATABASE_URL,
+                ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+              }
+            : {
+                host: process.env.DB_HOST || 'localhost',
+                port: process.env.DB_PORT || 5432,
+                user: process.env.DB_USER || 'postgres',
+                password: process.env.DB_PASSWORD || 'root',
+                database: process.env.DB_NAME || 'school_crm'
+            };
+
+        client = new Client(connectionConfig);
 
         await client.connect();
-        console.log('✓ Connected to PostgreSQL server');
+        console.log('✓ Connected to PostgreSQL');
 
         // Read schema file
         let schemaPath = path.join(__dirname, '../../../../database/schema.sql');

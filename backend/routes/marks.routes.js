@@ -322,7 +322,8 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
                                 student_id: normalizedRow['student id'] || normalizedRow['student_id'] || null,
                                 roll_number: normalizedRow['roll number'] || normalizedRow['roll_number'] || normalizedRow['roll no'] || null,
                                 marks_obtained: normalizedRow['marks'] || normalizedRow['marks_obtained'] || normalizedRow['marks obtained'] || 0,
-                                is_absent: normalizedRow['absent'] || normalizedRow['is_absent'] || normalizedRow['status'] === 'Absent' || false
+                                is_absent: normalizedRow['absent'] || normalizedRow['is_absent'] || normalizedRow['status'] === 'Absent' || false,
+                                remarks: normalizedRow['remarks'] || normalizedRow['note'] || normalizedRow['comment'] || null
                             });
                         } catch (err) {
                             errors.push({
@@ -362,7 +363,8 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
                         student_id: getVal(row, 'Student ID', 'student_id'),
                         roll_number: getVal(row, 'Roll Number', 'roll no', 'roll_number'),
                         marks_obtained: getVal(row, 'Marks', 'marks_obtained', 'marks obtained'),
-                        is_absent: getVal(row, 'Absent', 'status') === 'Absent' || getVal(row, 'Absent', 'is_absent') === 'true' || false
+                        is_absent: getVal(row, 'Absent', 'status') === 'Absent' || getVal(row, 'Absent', 'is_absent') === 'true' || false,
+                        remarks: getVal(row, 'Remarks', 'remarks', 'note', 'comment')
                     });
                 } catch (error) {
                     errors.push({ row: rowNumber, error: error.message });
@@ -406,12 +408,12 @@ router.post('/bulk-upload', authenticateToken, authorize('admin', 'teacher'), up
 
                     await conn.query(
                         `INSERT INTO internal_marks 
-              (student_id, class_subject_id, exam_type_id, academic_year, marks_obtained, max_marks, is_absent, entered_by)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              (student_id, class_subject_id, exam_type_id, academic_year, marks_obtained, max_marks, is_absent, entered_by, remarks)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
               ON CONFLICT (student_id, class_subject_id, exam_type_id, academic_year)
-              DO UPDATE SET marks_obtained = EXCLUDED.marks_obtained, is_absent = EXCLUDED.is_absent, entered_by = EXCLUDED.entered_by`,
+              DO UPDATE SET marks_obtained = EXCLUDED.marks_obtained, is_absent = EXCLUDED.is_absent, entered_by = EXCLUDED.entered_by, remarks = EXCLUDED.remarks`,
                         [studentId, class_subject_id, exam_type_id, academic_year, mark.marks_obtained,
-                            classSubject.max_marks, mark.is_absent === 'true' || mark.is_absent === true || mark.is_absent === 'Yes', entered_by]
+                            classSubject.max_marks, mark.is_absent === 'true' || mark.is_absent === true || mark.is_absent === 'Yes', entered_by, mark.remarks || null]
                     );
 
                     // Automatically calculate grade for this student

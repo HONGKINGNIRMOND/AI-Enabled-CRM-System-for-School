@@ -478,4 +478,426 @@ router.get('/attendance-summary/export', authenticateToken, authorize('admin', '
     }
 });
 
+
+// Get filtered student analytics
+router.get('/student-analytics', authenticateToken, authorize('admin', 'teacher', 'hod'), async (req, res) => {
+    try {
+        const {
+            academic_year,
+            class_id,
+            section_id,
+            min_attendance,
+            max_attendance,
+            min_performance,
+            max_performance,
+            subject_ids,
+            min_subject_performance,
+            max_subject_performance
+        } = req.query;
+
+        const year = academic_year || process.env.CURRENT_ACADEMIC_YEAR || '2026-2027';
+        
+        // Parse subject_ids if it's a string or array
+        let subjectIdsArray = [];
+        let filterBySubject = false;
+        if (req.query.hasOwnProperty('subject_ids')) {
+            filterBySubject = true;
+            if (subject_ids && subject_ids !== '') {
+                subjectIdsArray = Array.isArray(subject_ids) ? subject_ids : subject_ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+            }
+        }
+
+        let sql = `
+            WITH student_attendance AS (
+                SELECT 
+                    student_id,
+                    ROUND((SUM(present_days)::DECIMAL / NULLIF(SUM(total_days), 0)) * 100, 2) as avg_attendance
+                FROM attendance_summary
+                WHERE academic_year = $1
+                GROUP BY student_id
+            ),
+            student_overall_performance AS (
+                SELECT 
+                    student_id,
+                    ROUND(AVG(percentage), 2) as overall_percentage
+                FROM student_grades
+                WHERE academic_year = $1
+                GROUP BY student_id
+            ),
+            student_subject_performance AS (
+                SELECT 
+                    sg.student_id,
+                    JSONB_OBJECT_AGG(s.subject_name, sg.percentage) as subject_performances
+                FROM student_grades sg
+                JOIN class_subjects cs ON sg.class_subject_id = cs.id
+                JOIN subjects s ON cs.subject_id = s.id
+                WHERE sg.academic_year = $1
+                ${filterBySubject ? `AND s.id = ANY($2::int[])` : ''}
+                GROUP BY sg.student_id
+            )
+            SELECT 
+                s.id,
+                se.roll_number,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                c.class_name,
+                sec.section_name,
+                COALESCE(sa.avg_attendance, 0) as attendance_percentage,
+                COALESCE(sop.overall_percentage, 0) as overall_performance,
+                COALESCE(ssp.subject_performances, '{}'::jsonb) as subject_performances
+            FROM students s
+            JOIN student_enrollments se ON s.id = se.student_id AND se.is_current = TRUE
+            JOIN classes c ON se.class_id = c.id
+            JOIN sections sec ON se.section_id = sec.id
+            LEFT JOIN student_attendance sa ON s.id = sa.student_id
+            LEFT JOIN student_overall_performance sop ON s.id = sop.student_id
+            LEFT JOIN student_subject_performance ssp ON s.id = ssp.student_id
+            WHERE se.academic_year = $1
+        `;
+
+        const params = [year];
+        if (filterBySubject) params.push(subjectIdsArray);
+
+        let paramIndex = params.length + 1;
+
+        if (class_id) {
+            sql += ` AND se.class_id = $${paramIndex++}`;
+            params.push(class_id);
+        }
+        if (section_id) {
+            sql += ` AND se.section_id = $${paramIndex++}`;
+            params.push(section_id);
+        }
+        if (min_attendance) {
+            sql += ` AND COALESCE(sa.avg_attendance, 0) >= $${paramIndex++}`;
+            params.push(min_attendance);
+        }
+        if (max_attendance) {
+            sql += ` AND COALESCE(sa.avg_attendance, 0) <= $${paramIndex++}`;
+            params.push(max_attendance);
+        }
+        if (min_performance) {
+            sql += ` AND COALESCE(sop.overall_percentage, 0) >= $${paramIndex++}`;
+            params.push(min_performance);
+        }
+        if (max_performance) {
+            sql += ` AND COALESCE(sop.overall_percentage, 0) <= $${paramIndex++}`;
+            params.push(max_performance);
+        }
+        
+        // Subject specific filtering (ANY match)
+        if (filterBySubject && (min_subject_performance || max_subject_performance)) {
+            sql += ` AND EXISTS (
+                SELECT 1 
+                FROM jsonb_each_text(ssp.subject_performances) as x(subject, score)
+                WHERE 1=1
+                ${min_subject_performance ? `AND x.score::float >= $${paramIndex++}` : ''}
+                ${max_subject_performance ? `AND x.score::float <= $${paramIndex++}` : ''}
+            )`;
+            if (min_subject_performance) params.push(min_subject_performance);
+            if (max_subject_performance) params.push(max_subject_performance);
+        }
+
+        sql += ' ORDER BY c.class_name, sec.section_name, se.roll_number';
+
+        const data = await query(sql, params);
+
+        res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('Student analytics report error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to generate student analytics'
+        });
+    }
+});
+
+// Export Student Analytics as PDF
+router.get('/student-analytics/export', authenticateToken, authorize('admin', 'teacher', 'hod'), async (req, res) => {
+    try {
+        const {
+            academic_year,
+            class_id,
+            section_id,
+            min_attendance,
+            max_attendance,
+            min_performance,
+            max_performance,
+            subject_ids,
+            min_subject_performance,
+            max_subject_performance,
+            class_name,
+            section_name,
+            student_ids // Array of IDs for targeted export
+        } = req.query;
+
+        const year = academic_year || process.env.CURRENT_ACADEMIC_YEAR || '2026-2027';
+
+        // Parse IDs
+        const studentIdsArray = typeof student_ids === 'string' ? student_ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)) : (Array.isArray(student_ids) ? student_ids : []);
+        let subjectIdsArray = [];
+        let filterBySubject = false;
+        if (req.query.hasOwnProperty('subject_ids')) {
+            filterBySubject = true;
+            if (subject_ids && subject_ids !== '') {
+                subjectIdsArray = Array.isArray(subject_ids) ? subject_ids : subject_ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+            }
+        }
+
+        let sql = `
+            WITH student_attendance AS (
+                SELECT 
+                    student_id,
+                    ROUND((SUM(present_days)::DECIMAL / NULLIF(SUM(total_days), 0)) * 100, 2) as avg_attendance
+                FROM attendance_summary
+                WHERE academic_year = $1
+                GROUP BY student_id
+            ),
+            student_overall_performance AS (
+                SELECT 
+                    student_id,
+                    ROUND(AVG(percentage), 2) as overall_percentage
+                FROM student_grades
+                WHERE academic_year = $1
+                GROUP BY student_id
+            ),
+            student_subject_performance AS (
+                SELECT 
+                    sg.student_id,
+                    JSONB_OBJECT_AGG(s.subject_name, sg.percentage) as subject_performances
+                FROM student_grades sg
+                JOIN class_subjects cs ON sg.class_subject_id = cs.id
+                JOIN subjects s ON cs.subject_id = s.id
+                WHERE sg.academic_year = $1
+                ${filterBySubject ? `AND s.id = ANY($2::int[])` : ''}
+                GROUP BY sg.student_id
+            )
+            SELECT 
+                s.id,
+                se.roll_number,
+                CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                c.class_name,
+                sec.section_name,
+                COALESCE(sa.avg_attendance, 0) as attendance_percentage,
+                COALESCE(sop.overall_percentage, 0) as overall_performance,
+                COALESCE(ssp.subject_performances, '{}'::jsonb) as subject_performances
+            FROM students s
+            JOIN student_enrollments se ON s.id = se.student_id AND se.is_current = TRUE
+            JOIN classes c ON se.class_id = c.id
+            JOIN sections sec ON se.section_id = sec.id
+            LEFT JOIN student_attendance sa ON s.id = sa.student_id
+            LEFT JOIN student_overall_performance sop ON s.id = sop.student_id
+            LEFT JOIN student_subject_performance ssp ON s.id = ssp.student_id
+            WHERE se.academic_year = $1
+        `;
+
+        const params = [year];
+        if (filterBySubject) params.push(subjectIdsArray);
+
+        let paramIndex = params.length + 1;
+        if (studentIdsArray && studentIdsArray.length > 0) {
+            sql += ` AND s.id = ANY($${paramIndex++}::int[])`;
+            params.push(studentIdsArray);
+        } else {
+            if (class_id) { sql += ` AND se.class_id = $${paramIndex++}`; params.push(class_id); }
+            if (section_id) { sql += ` AND se.section_id = $${paramIndex++}`; params.push(section_id); }
+            if (min_attendance) { sql += ` AND COALESCE(sa.avg_attendance, 0) >= $${paramIndex++}`; params.push(min_attendance); }
+            if (max_attendance) { sql += ` AND COALESCE(sa.avg_attendance, 0) <= $${paramIndex++}`; params.push(max_attendance); }
+            if (min_performance) { sql += ` AND COALESCE(sop.overall_percentage, 0) >= $${paramIndex++}`; params.push(min_performance); }
+            if (max_performance) { sql += ` AND COALESCE(sop.overall_performance, 0) <= $${paramIndex++}`; params.push(max_performance); }
+            
+            if (subjectIdsArray.length > 0 && (min_subject_performance || max_subject_performance)) {
+                sql += ` AND EXISTS (
+                    SELECT 1 
+                    FROM jsonb_each_text(ssp.subject_performances) as x(subject, score)
+                    WHERE 1=1
+                    ${min_subject_performance ? `AND x.score::float >= $${paramIndex++}` : ''}
+                    ${max_subject_performance ? `AND x.score::float <= $${paramIndex++}` : ''}
+                )`;
+                if (min_subject_performance) params.push(min_subject_performance);
+                if (max_subject_performance) params.push(max_subject_performance);
+            }
+        }
+
+        sql += ' ORDER BY c.class_name, sec.section_name, se.roll_number';
+        const data = await query(sql, params);
+
+        // Calculate dynamic orientation based on visible columns
+        const showAttendance = req.query.show_attendance === 'true';
+        const showPerformance = req.query.show_performance === 'true';
+        const showSubject = req.query.show_subject === 'true';
+        
+        let subjectCount = 0;
+        if (showSubject) {
+            if (filterBySubject) {
+                subjectCount = subjectIdsArray.length;
+            } else if (data.length > 0 && data[0].subject_performances) {
+                subjectCount = Object.keys(data[0].subject_performances).length;
+            }
+        }
+        
+        const totalBaseCols = 2 + (showAttendance ? 1 : 0) + (showPerformance ? 1 : 0);
+        const orientation = (subjectCount > 2 || (subjectCount > 0 && totalBaseCols > 3)) ? 'landscape' : 'portrait';
+        const docSize = 'A4';
+
+        const doc = new PDFDocument({ margin: 30, size: docSize, layout: orientation });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=student_analytics_${year}.pdf`);
+        doc.pipe(res);
+        
+        // Header
+        const pageWidth = orientation === 'landscape' ? 841 : 595;
+        doc.fontSize(20).text('Student Analytics Report', { align: 'center' });
+        doc.fontSize(10).text(`Academic Year: ${year}`, { align: 'center' });
+        doc.moveDown();
+
+        doc.fontSize(10).font('Helvetica-Bold');
+        doc.text(`Class: ${class_name || 'All'}`, 40);
+        doc.text(`Section: ${section_name || 'All'}`, orientation === 'landscape' ? 200 : 150);
+        doc.font('Helvetica').moveDown();
+
+        // Define base columns dynamically
+        const baseCols = [
+            { id: 'roll', label: 'Roll No', width: 40, value: (s) => s.roll_number || '-' },
+            { id: 'name', label: 'Student Name', width: orientation === 'landscape' ? 130 : 90, value: (s) => s.student_name, truncate: true }
+        ];
+
+        if (showAttendance) {
+            baseCols.push({ id: 'attd', label: 'Attd%', width: 40, value: (s) => `${s.attendance_percentage}%` });
+        }
+        if (showPerformance) {
+            baseCols.push({ id: 'ovr', label: 'Ovr%', width: 40, value: (s) => `${s.overall_performance}%` });
+        }
+
+        // Get unique subjects for defining columns
+        let selectedSubjectNames = [];
+        if (showSubject) {
+            if (filterBySubject && subjectIdsArray.length > 0) {
+                // Fetch names for selected subject IDs to ensure all columns are present
+                const subjectsInfo = await query('SELECT subject_name FROM subjects WHERE id = ANY($1::int[]) ORDER BY id', [subjectIdsArray]);
+                selectedSubjectNames = subjectsInfo.map(s => s.subject_name);
+            } else if (!filterBySubject) {
+                // If not filtered by IDs but analysis is ON, get all subjects present in the first student's data
+                if (data.length > 0 && data[0].subject_performances) {
+                    selectedSubjectNames = Object.keys(data[0].subject_performances).sort();
+                }
+            }
+        }
+
+        // Analysis Avg Column (average of selected subjects)
+        const analysisAvgCol = showSubject ? [{ label: 'Subject Analysis', width: 75 }] : [];
+        
+        const subjectCols = selectedSubjectNames.map(name => ({
+            label: name,
+            width: orientation === 'landscape' ? 70 : 55,
+            name // Helper to get value
+        }));
+
+        const allCols = [...baseCols, ...analysisAvgCol, ...subjectCols];
+        const rowHeight = 25;
+        const startX = 40;
+        let startY = doc.y + 10;
+        const totalTableWidth = allCols.reduce((acc, col) => acc + col.width, 0);
+
+        // Table Header Helper
+        const drawHeader = (y) => {
+            doc.rect(startX, y, totalTableWidth, rowHeight).fill('#f3f4f6').stroke('#e5e7eb');
+            doc.fillColor('#374151').font('Helvetica-Bold').fontSize(9);
+            let headerX = startX + 5;
+            allCols.forEach(col => {
+                doc.text(col.label, headerX, y + 7, { width: col.width - 5, truncate: true });
+                headerX += col.width;
+            });
+        };
+
+        drawHeader(startY);
+        startY += rowHeight;
+
+        // Data Rows
+        doc.font('Helvetica').fillColor('#000000').fontSize(9);
+        data.forEach((student, index) => {
+            if (startY > (orientation === 'landscape' ? 520 : 750)) {
+                doc.addPage({ layout: orientation });
+                startY = 40;
+                drawHeader(startY);
+                startY += rowHeight;
+            }
+
+            const rowBg = index % 2 === 0 ? '#ffffff' : '#fafafa';
+            doc.rect(startX, startY, totalTableWidth, rowHeight).fill(rowBg).stroke('#f9fafb');
+            
+            doc.fillColor('#000000').font('Helvetica');
+            let dataX = startX + 5;
+            
+            // Render base dynamic columns
+            baseCols.forEach(col => {
+                doc.text(col.value(student), dataX, startY + 7, col.truncate ? { width: col.width - 5, truncate: true } : {});
+                dataX += col.width;
+            });
+            
+            // Analysis Avg calculation
+            if (showSubject) {
+                if (selectedSubjectNames.length > 0) {
+                    const totalScore = selectedSubjectNames.reduce((acc, name) => acc + (parseFloat(student.subject_performances[name]) || 0), 0);
+                    const analysisAvg = (totalScore / selectedSubjectNames.length).toFixed(1);
+                    doc.font('Helvetica-Bold').text(`${analysisAvg}%`, dataX, startY + 7); 
+                } else {
+                    doc.fontSize(7).font('Helvetica-Oblique').text('No Subjects', dataX, startY + 8);
+                }
+                doc.font('Helvetica').fontSize(9);
+                dataX += analysisAvgCol[0].width;
+            }
+
+            // Subject data
+            subjectCols.forEach(col => {
+                const score = student.subject_performances ? student.subject_performances[col.name] : '-';
+                doc.text(`${score}%`, dataX, startY + 7);
+                dataX += col.width;
+            });
+            
+            startY += rowHeight;
+        });
+
+        // Subject Wise Summary in PDF
+        if (selectedSubjectNames.length > 0) {
+            // Check for page break for summary
+            if (startY > (orientation === 'landscape' ? 450 : 650)) {
+                doc.addPage({ layout: orientation });
+                startY = 40;
+            } else {
+                startY += 30;
+            }
+
+            doc.fontSize(14).font('Helvetica-Bold').text('Subject-Wise Average Performance', startX);
+            startY = doc.y + 10;
+
+            const summaryColWidth = 120;
+            let summaryX = startX;
+
+            selectedSubjectNames.forEach(name => {
+                const avg = (data.reduce((acc, s) => acc + (parseFloat(s.subject_performances[name]) || 0), 0) / data.length).toFixed(1);
+                
+                // Card style for summary
+                doc.rect(summaryX, startY, summaryColWidth - 10, 50).fill('#f9fafb').stroke('#e5e7eb');
+                doc.fillColor('#374151').fontSize(8).font('Helvetica').text(name, summaryX + 5, startY + 10, { width: summaryColWidth - 20, truncate: true });
+                doc.fillColor(parseFloat(avg) < 40 ? '#dc2626' : '#7c3aed').fontSize(14).font('Helvetica-Bold').text(`${avg}%`, summaryX + 5, startY + 25);
+
+                summaryX += summaryColWidth;
+                if (summaryX + summaryColWidth > pageWidth - 30) {
+                    summaryX = startX;
+                    startY += 60;
+                }
+            });
+        }
+
+        doc.end();
+    } catch (error) {
+        console.error('PDF Export error:', error);
+        res.status(500).json({ success: false, message: 'Export failed' });
+    }
+});
+
 module.exports = router;
+

@@ -104,6 +104,38 @@ const AttendanceReports = () => {
         return 'text-red-600 bg-red-50';
     };
 
+    const handleExportCSV = () => {
+        if (attendanceData.length === 0) return;
+
+        const headers = ['Roll Number', 'Student Name', 'Status', 'Date', 'Session', 'Remarks'];
+        const dateRange = `${filters.startDate} to ${filters.endDate}`;
+        const csvData = attendanceData.map(s => [
+            `"${s.roll_number || '-'}"`,
+            `"${s.student_name}"`,
+            `"${s.attendance_percentage || 0}%"`,
+            `"${dateRange}"`,
+            `"${filters.session}"`,
+            `""`
+        ]);
+
+        const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        // Format filename
+        const className = classes.find(c => c.id == filters.classId)?.class_name || 'Class';
+        const sectionName = sections.find(s => s.id == filters.sectionId)?.section_name || 'Section';
+        const fileName = `Attendance_Report_${className}_${sectionName}_${filters.startDate}_to_${filters.endDate}.csv`.replace(/\s+/g, '_');
+
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
@@ -211,7 +243,10 @@ const AttendanceReports = () => {
                                 <UserCheck className="w-5 h-5 text-green-600" />
                                 Attendance Summary ({attendanceData.length} students)
                             </h2>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            <button
+                                onClick={handleExportCSV}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                            >
                                 <Download className="w-4 h-4" />
                                 Export CSV
                             </button>

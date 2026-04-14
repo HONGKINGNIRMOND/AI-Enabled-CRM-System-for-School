@@ -17,7 +17,8 @@ import {
     GraduationCap,
     DollarSign,
     Zap,
-    Send
+    Send,
+    Activity
 } from 'lucide-react';
 
 const HODDashboard = () => {
@@ -229,6 +230,17 @@ const HODDashboard = () => {
                                 </div>
                                 <h3 className="font-bold text-gray-900">E-Circulars</h3>
                                 <p className="text-sm text-gray-500 mt-2">Manage notices & circulars</p>
+                            </Link>
+
+                            <Link
+                                to="/reports/student-analytics"
+                                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md hover:border-blue-200 transition group flex flex-col items-center text-center"
+                            >
+                                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                    <Activity className="w-8 h-8" />
+                                </div>
+                                <h3 className="font-bold text-gray-900">Student Analytics</h3>
+                                <p className="text-sm text-gray-500 mt-2">Detailed performance reports</p>
                             </Link>
                         </div>
 

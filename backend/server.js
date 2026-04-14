@@ -11,8 +11,8 @@ const app = express();
 // CORS configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  'http://localhost:3000',
-  'http://localhost:5173',
+  'http://localhost:5173', // Vite default
+  'http://localhost:3000'  // Alternate dev port
 ].filter(Boolean);
 
 app.use(cors({
@@ -143,8 +143,8 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3001;
-// In production, bind to 0.0.0.0 so Nginx can proxy. In development, bind to localhost.
+const PORT = parseInt(process.env.PORT, 10) || 3001;
+// In production, bind to 0.0.0.0 so Nginx/Cloud can proxy. In development, bind to localhost.
 const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost');
 
 app.listen(PORT, HOST, () => {
